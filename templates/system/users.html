@@ -1,0 +1,1016 @@
+<!DOCTYPE html>
+<html lang="{{ current_language|default('ko') }}" data-theme="{{ current_theme|default('mono') }}">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
+    <title>{{ messages.dashboard.title_users }}</title>
+    <!-- Use dashboard layout links to ensure consistency -->
+    <link rel="stylesheet" href="{{ url_for('dashboard.static', filename='vendor/css/inter.css') }}">
+    <link rel="stylesheet" href="{{ url_for('dashboard.static', filename='vendor/css/fontawesome.all.min.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/themes.css') }}">
+    <!-- Load dashboard css for shared styles -->
+    <link rel="stylesheet" href="{{ url_for('dashboard.static', filename='css/dashboard.css') }}">
+    <style>
+        /* Specific overrides for User Management if needed, avoiding conflict with dashboard.css */
+
+        .layout-container {
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+            height: calc(100vh - 80px);
+            /* Adjust based on valid top bar height */
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Resizable layout specific styles */
+        .grid-area {
+            flex: 0 0 50%;
+            background: var(--card-bg);
+            margin: 0 1rem;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+        }
+
+        .resize-handle {
+            height: 8px;
+            background: var(--bg-main);
+            cursor: row-resize;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 0 1rem;
+        }
+
+        .resize-handle:hover {
+            background: var(--primary-accent);
+        }
+
+        .resize-handle::after {
+            content: '';
+            width: 40px;
+            height: 4px;
+            background: #cbd5e1;
+            border-radius: 2px;
+        }
+
+        .tab-area {
+            flex: 1;
+            background: var(--card-bg);
+            margin: 0 1rem 1rem 1rem;
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+        }
+
+        /* Reuse dashboard table styles, just ensure specific tweaks if any */
+        .logs-table th {
+            white-space: nowrap;
+        }
+
+        /* Detail Grid */
+        .detail-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.5rem 1rem;
+            padding: 1rem;
+        }
+
+        .detail-row {
+            display: grid;
+            grid-template-columns: 120px 1fr;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .detail-label {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+        }
+
+        .detail-value {
+            padding: 0.3rem 0.5rem;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            background: var(--bg-secondary);
+            font-size: 0.9rem;
+            min-height: 30px;
+            display: flex;
+            align-items: center;
+            color: var(--text-primary);
+        }
+
+        /* Modal Styles */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 9999;
+            justify-content: center;
+            align-items: center;
+            backdrop-filter: blur(2px);
+        }
+
+        .modal-content {
+            background: var(--card-bg);
+            padding: 2rem;
+            border-radius: 8px;
+            width: 400px;
+            max-width: 90%;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            border: 1px solid var(--card-border);
+            position: relative;
+        }
+
+        .modal-header {
+            font-size: 1.25rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            color: var(--text-primary);
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 0.6rem;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            background: var(--bg-input);
+            color: var(--text-primary);
+            font-size: 0.95rem;
+        }
+
+        .btn-group {
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.75rem;
+            margin-top: 2rem;
+        }
+
+        .btn-cancel {
+            padding: 0.5rem 1rem;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            background: transparent;
+            color: var(--text-secondary);
+            cursor: pointer;
+        }
+
+        .btn-submit {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 4px;
+            background: var(--primary-accent);
+            color: white;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        /* Duck Animation */
+        #duckContainer {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 9999;
+            overflow: hidden;
+            display: none;
+        }
+
+        .duck {
+            position: absolute;
+            width: 60px;
+            height: auto;
+            right: -100px;
+            /* Start off-screen right */
+            animation: flyLeft 10s linear forwards;
+            background-image: url("{{ url_for('static', filename='img/duck.png') }}");
+            background-size: contain;
+            background-repeat: no-repeat;
+        }
+
+        @keyframes flyLeft {
+            0% {
+                transform: translateX(0) translateY(0);
+                right: -100px;
+            }
+
+            100% {
+                transform: translateX(-120vw) translateY(var(--y-shift, 0px));
+                right: 100%;
+            }
+        }
+    </style>
+    <style>
+        /* Override for Mono Theme - Table Borders */
+        [data-theme="mono"] .logs-table,
+        [data-theme="mono"] .logs-table th {
+            border-width: 1px !important;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="dashboard-container">
+        <!-- Sidebar -->
+        <aside class="sidebar collapsed">
+            <div class="logo">
+                <div style="display:flex; align-items:center; gap:0.75rem; overflow:hidden;">
+                    <i class="fas fa-robot" style="font-size: 1.5rem;"></i>
+                    <span style="white-space: pre-line; font-size: 1.5rem; line-height: 1.2; font-weight: 700;">{{
+                        messages.dashboard.admin_title }}</span>
+                </div>
+                <i class="fas fa-chevron-left" id="sidebarToggle"
+                    style="cursor: pointer; margin-left: auto; transition: transform 0.3s; color: var(--text-secondary);"></i>
+            </div>
+            <nav class="nav-menu" style="flex:1;">
+
+
+                <a href="/"><i class="fas fa-home"></i> <span>{{ messages.dashboard.nav_main }}</span></a>
+
+                <a href="/dashboard"><i class="fas fa-chart-line"></i> <span>{{ messages.dashboard.nav_dashboard
+                        }}</span></a>
+
+                <!-- System Management Accordion -->
+                <div class="nav-group">
+                    <button class="accordion-btn active" onclick="toggleAccordion(this)">
+                        <span><i class="fas fa-cogs"></i> <span>{{ messages.dashboard.nav_system }}</span></span>
+                        <i class="fas fa-chevron-down"></i>
+                    </button>
+                    <div class="accordion-content open">
+                        <a href="/system/users" class="active">
+                            <i class="fas fa-users"></i>
+                            <span>{{ messages.dashboard.nav_users }}</span>
+                        </a>
+                        <a href="/system/templates">
+                            <i class="fas fa-file-alt"></i>
+                            <span>{{ messages.dashboard.nav_templates }}</span>
+                        </a>
+                        <!-- <a href="#">{{ messages.dashboard.nav_groups }}</a> -->
+                        <!-- <a href="#">{{ messages.dashboard.nav_menus }}</a> -->
+                    </div>
+                </div>
+            </nav>
+        </aside>
+
+        <main class="main-content" style="padding:0; overflow:hidden; display:flex; flex-direction:column;">
+            <header class="top-bar"
+                style="justify-content: space-between; padding: 1rem 1.5rem; margin-bottom:0; background:var(--bg-main); flex-shrink:0;">
+                <div style="display:flex; align-items:center; gap:1rem;">
+                    <h2 style="font-size:1.2rem; font-weight:700;">{{ messages.dashboard.title_users }}</h2>
+                </div>
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <button onclick="openCreateModal()" class="btn btn-primary"
+                        style="font-size:0.8rem; padding: 0.4rem 1rem; border-radius:4px; background:var(--primary-accent); color:white; border:none; cursor:pointer;">
+                        <i class="fas fa-plus"></i> {{ messages.dashboard.label_create_user }}
+                    </button>
+                    <button onclick="openEditModal()" id="btnEdit" class="btn"
+                        style="font-size:0.8rem; padding: 0.4rem 1rem; border-radius:4px; background:var(--bg-secondary); color:var(--text-secondary); border:1px solid var(--border-color); cursor:pointer;"
+                        disabled>
+                        <i class="fas fa-edit"></i> {{ messages.dashboard.label_edit_user }}
+                    </button>
+                </div>
+            </header>
+
+            <div class="layout-container" id="layoutContainer">
+                <!-- 1. Filter Area -->
+                <div class="card filter-area"
+                    style="background: var(--bg-card); padding: 1rem; margin: 0 1rem 1rem 1rem; border:1px solid var(--border-color); border-radius:6px; display:flex; gap:1rem; align-items:flex-end; flex-wrap:wrap;">
+
+                    <div style="display:flex; flex-direction:column; gap:0.25rem;">
+                        <label style="font-size:0.8rem; font-weight:600; color:var(--text-secondary);">{{
+                            messages.dashboard.label_category }}</label>
+                        <select id="searchCategory"
+                            style="padding:0.4rem; border:1px solid var(--border-color); border-radius:4px; font-size:0.9rem; min-width:120px; background:var(--bg-input); color:var(--text-primary);">
+                            <option value="all">All</option>
+                            <option value="id">{{ messages.dashboard.col_userid }}</option>
+                            <option value="name">{{ messages.dashboard.col_username }}</option>
+                            <option value="email">{{ messages.dashboard.col_email }}</option>
+                        </select>
+                    </div>
+
+                    <div style="display:flex; flex-direction:column; gap:0.25rem; flex:1;">
+                        <label style="font-size:0.8rem; font-weight:600; color:var(--text-secondary);">{{
+                            messages.dashboard.label_keyword }}</label>
+                        <input type="text" id="searchKeyword" onkeypress="if(event.key==='Enter') loadUsers(1)"
+                            placeholder="{{ messages.dashboard.ph_search }}"
+                            style="padding:0.4rem; border:1px solid var(--border-color); border-radius:4px; font-size:0.9rem; width:100%; background:var(--bg-input); color:var(--text-primary);">
+                    </div>
+
+                    <button onclick="loadUsers(1)"
+                        style="padding:0.45rem 1.2rem; background:var(--primary-accent); color:white; border:none; border-radius:4px; cursor:pointer; font-weight:600;">
+                        <i class="fas fa-search"></i> {{ messages.dashboard.btn_search }}
+                    </button>
+                </div>
+
+                <!-- 2. Grid Area -->
+                <div class="grid-area" id="gridArea">
+                    <div style="overflow-y: auto; flex:1;">
+                        <table class="logs-table" style="width:100%; border-collapse: collapse;">
+                            <thead
+                                style="position:sticky; top:0; background:var(--bg-card); z-index:10; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+                                <tr>
+                                    <th>{{ messages.dashboard.col_userid }}</th>
+                                    <th>{{ messages.dashboard.col_username }}</th>
+                                    <th>{{ messages.dashboard.col_email }}</th>
+                                    <th>{{ messages.dashboard.col_created }}</th>
+                                    <th>{{ messages.dashboard.col_last_login }}</th>
+                                    <th style="width:80px;">{{ messages.dashboard.col_status }}</th>
+                                </tr>
+                            </thead>
+                            <tbody id="usersTableBody">
+                                <!-- Data -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Pagination & Rows -->
+                    <div class="pagination-controls"
+                        style="padding: 0.5rem 1rem; border-top: 1px solid var(--border-color); min-height:50px; display:flex; justify-content:space-between; align-items:center; background:var(--bg-card);">
+                        <div style="flex:1;"></div>
+
+                        <div style="display:flex; align-items:center; gap:0.5rem;">
+                            <button id="uPrev" onclick="changeUserPage(-1)" disabled
+                                style="padding:0.3rem 0.6rem; border:1px solid var(--border-color); border-radius:4px; background:var(--bg-main); cursor:pointer; color:var(--text-primary);"><i
+                                    class="fas fa-chevron-left"></i></button>
+                            <span id="uPageInfo"
+                                style="margin: 0 0.5rem; font-size:0.9rem; color:var(--text-primary); font-weight:500;">1
+                                / 1</span>
+                            <button id="uNext" onclick="changeUserPage(1)" disabled
+                                style="padding:0.3rem 0.6rem; border:1px solid var(--border-color); border-radius:4px; background:var(--bg-main); cursor:pointer; color:var(--text-primary);"><i
+                                    class="fas fa-chevron-right"></i></button>
+                        </div>
+
+                        <div style="flex:1; display:flex; justify-content:flex-end;">
+                            <select id="userPageSize" onchange="loadUsers(1)"
+                                style="padding:0.3rem; border:1px solid var(--border-color); border-radius:4px; font-size:0.85rem; cursor:pointer; background:var(--bg-input); color:var(--text-primary);">
+                                <option value="10" selected>10 {{ messages.dashboard.rows_per_page }}</option>
+                                <option value="20">20 {{ messages.dashboard.rows_per_page }}</option>
+                                <option value="50">50 {{ messages.dashboard.rows_per_page }}</option>
+                                <option value="100">100 {{ messages.dashboard.rows_per_page }}</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Resizer -->
+                <div class="resize-handle" id="resizer"></div>
+
+                <!-- 3. Tab Area -->
+                <div class="tab-area" id="tabArea">
+                    <div class="tabs-header"
+                        style="margin-bottom:0.5rem; border-bottom:1px solid var(--border-color); display:flex; gap:1rem;">
+                        <button class="tab-btn active" onclick="switchTab('detail')"
+                            style="padding:0.5rem 1rem; background:transparent; border:none; border-bottom:2px solid var(--primary-accent); color:var(--primary-accent); font-weight:600; cursor:pointer;">{{
+                            messages.dashboard.tab_details }}</button>
+                        <button class="tab-btn" onclick="switchTab('logs')"
+                            style="padding:0.5rem 1rem; background:transparent; border:none; border-bottom:2px solid transparent; color:var(--text-secondary); font-weight:600; cursor:pointer;">{{
+                            messages.dashboard.tab_logs }}</button>
+                    </div>
+
+                    <div id="tab-detail" class="tab-content-panel active" style="overflow-y:auto; padding-top:1rem;">
+                        <div id="userDetailContent">
+                            <p
+                                style="text-align:center; color: var(--text-secondary); margin-top:2rem; font-size:0.9rem;">
+                                {{ messages.dashboard.msg_select_user }}
+                            </p>
+                        </div>
+                    </div>
+
+                    <div id="tab-logs" class="tab-content-panel"
+                        style="display:none; flex-direction:column; height:100%; padding-top:1rem; padding-bottom: 2rem;">
+                        <div style="flex:1; overflow-y:auto; border:1px solid var(--border-color); border-radius:4px;">
+                            <table class="logs-table" style="width:100%;">
+                                <thead style="position:sticky; top:0; background:var(--bg-card);">
+                                    <tr>
+                                        <th style="width: 60px;">ID</th>
+                                        <th style="width: 200px;">{{ messages.dashboard.col_time }}</th>
+                                        <th style="width: auto; min-width: 200px;">{{ messages.dashboard.col_query }}
+                                        </th>
+                                        <th style="width: 250px;">{{ messages.dashboard.col_predicted }}</th>
+                                        <th style="width: 100px;">{{ messages.dashboard.col_feedback }}</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="userLogsBody">
+                                    <tr>
+                                        <td colspan="5" style="text-align:center;">{{ messages.dashboard.msg_select_user
+                                            }}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <!-- Logs Pagination -->
+                        <div class="pagination-controls"
+                            style="padding: 0.5rem; justify-content: center; margin-top: 0.5rem; display:flex; align-items:center; gap:0.5rem;">
+                            <button id="lPrev" onclick="changeLogPage(-1)" disabled
+                                style="padding:0.2rem 0.5rem; border:1px solid var(--border-color); border-radius:4px; cursor:pointer;"><i
+                                    class="fas fa-chevron-left"></i></button>
+                            <span id="lPageInfo" style="margin: 0 0.5rem; font-size:0.8rem;">1 / 1</span>
+                            <button id="lNext" onclick="changeLogPage(1)" disabled
+                                style="padding:0.2rem 0.5rem; border:1px solid var(--border-color); border-radius:4px; cursor:pointer;"><i
+                                    class="fas fa-chevron-right"></i></button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modals -->
+    <!-- Create User Modal -->
+    <!-- Create User Modal -->
+    <div id="createUserModal" class="modal-overlay" onclick="closeModal('createUserModal')">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <div class="modal-header">{{ messages.dashboard.modal_create_title }}</div>
+            <form onsubmit="createUser(event)">
+                <div class="form-group">
+                    <label class="form-label">{{ messages.dashboard.detail_userid }} *</label>
+                    <input type="text" id="new_id" class="form-input" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">{{ messages.dashboard.detail_username }} *</label>
+                    <input type="text" id="new_name" class="form-input" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">{{ messages.dashboard.detail_email }} *</label>
+                    <input type="email" id="new_email" class="form-input" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">{{ messages.login.label_password }} *</label>
+                    <input type="password" id="new_password" class="form-input" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">{{ messages.login.label_password_confirm }} *</label>
+                    <input type="password" id="new_password_confirm" class="form-input" required>
+                </div>
+                <div class="btn-group">
+                    <button type="button" class="btn btn-cancel" onclick="closeModal('createUserModal')">{{
+                        messages.login.btn_cancel }}</button>
+                    <button type="submit" class="btn btn-submit"
+                        style="background:var(--primary-accent); color:white; border:none; padding:0.5rem 1rem; border-radius:4px;">{{
+                        messages.login.btn_signup_submit }}</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Edit User Modal -->
+    <!-- Edit User Modal -->
+    <div id="editUserModal" class="modal-overlay" onclick="closeModal('editUserModal')">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <div class="modal-header">{{ messages.dashboard.modal_edit_title }}</div>
+            <form onsubmit="updateUser(event)">
+                <input type="hidden" id="edit_id_hidden">
+                <div class="form-group">
+                    <label class="form-label">{{ messages.dashboard.detail_userid }}</label>
+                    <input type="text" id="edit_id" class="form-input" disabled
+                        style="background:#f1f5f9; color:#64748b;">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">{{ messages.dashboard.detail_username }}</label>
+                    <input type="text" id="edit_name" class="form-input">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">{{ messages.dashboard.detail_email }}</label>
+                    <input type="email" id="edit_email" class="form-input">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">{{ messages.dashboard.label_password_opt }}</label>
+                    <input type="password" id="edit_password" class="form-input"
+                        placeholder="{{ messages.dashboard.ph_password_opt }}">
+                </div>
+                <div class="form-group" style="display:flex; align-items:center; gap:0.5rem; margin-top:1rem;">
+                    <input type="checkbox" id="edit_unlock">
+                    <label for="edit_unlock" style="font-size:0.9rem; cursor:pointer;">{{
+                        messages.dashboard.label_locked }}</label>
+                </div>
+                <div class="btn-group">
+                    <button type="button" class="btn btn-cancel" onclick="closeModal('editUserModal')">{{
+                        messages.login.btn_cancel }}</button>
+                    <button type="submit" class="btn btn-submit"
+                        style="background:var(--primary-accent); color:white; border:none; padding:0.5rem 1rem; border-radius:4px;">{{
+                        messages.feedback.btn_submit }}</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Duck Container -->
+    {% if server_config.get('server', {}).get('enable_duck_animation', true) %}
+    <div id="duckContainer"></div>
+    {% endif %}
+
+    <!-- Scripts -->
+    <script src="{{ url_for('dashboard.static', filename='js/dashboard.js') }}"></script>
+    <script>
+        {% if server_config.get('server', {}).get('enable_duck_animation', true) %}
+        // Idle Animation Logic
+        let idleTime = 0;
+        const idleLimit = 5; // 5 seconds
+        let isFlocking = false;
+
+        // Increment idle time counter every second
+        const idleInterval = setInterval(timerIncrement, 1000);
+
+        function timerIncrement() {
+            idleTime++;
+            if (idleTime >= idleLimit && !isFlocking) {
+                spawnDuckFlock();
+            }
+        }
+
+        function resetTimer() {
+            idleTime = 0;
+        }
+
+        // Events to track activity
+        window.addEventListener('mousemove', resetTimer);
+        window.addEventListener('keypress', resetTimer);
+        window.addEventListener('click', resetTimer);
+        window.addEventListener('scroll', resetTimer);
+        window.addEventListener('touchstart', resetTimer);
+
+        function spawnDuckFlock() {
+            isFlocking = true;
+            const container = document.getElementById('duckContainer');
+            if (!container) return;
+            container.style.display = 'block';
+            container.innerHTML = ''; // Clear previous
+
+            const numberOfDucks = 10;
+
+            for (let i = 0; i < numberOfDucks; i++) {
+                const duck = document.createElement('div');
+                duck.className = 'duck';
+
+                // Randomize Start position (Y)
+                const topP = Math.random() * 80 + 10; // 10% to 90% height
+                duck.style.top = topP + '%';
+
+                // Randomize Size slightly
+                const size = 50 + Math.random() * 30;
+                duck.style.width = size + 'px';
+                duck.style.height = size + 'px';
+
+                // Randomize Speed (Duration)
+                const duration = 8 + Math.random() * 5; // 8-13s
+                duck.style.animationDuration = duration + 's';
+
+                // Randomize Delay
+                const delay = Math.random() * 2; // 0-2s delay
+                duck.style.animationDelay = delay + 's';
+
+                // Random Y shift during flight
+                duck.style.setProperty('--y-shift', (Math.random() * 200 - 100) + 'px');
+
+                container.appendChild(duck);
+            }
+
+            // Cleanup after animation roughly finishes
+            setTimeout(() => {
+                container.style.display = 'none';
+                container.innerHTML = '';
+                isFlocking = false;
+                idleTime = 0; // Reset so it can happen again if still idle
+            }, 15000); // 13s max duration + 2s delay
+        }
+        {% endif %}
+
+        // Shared logic with dashboard.js logic being reused for accordion
+        // Sidebar Toggle Logic handled by dashboard.js
+
+        function changeLanguage(lang) {
+            // Simple cookie setting or re-routing logic as per dashboard
+            document.cookie = `language=${lang}; path=/; max-age=31536000`;
+            window.location.reload();
+        }
+
+        let usersPage = 1;
+        let selectedUserId = null;
+        let currentLogPage = 1;
+        let selectedUserObj = null;
+
+        // --- Layout Resizing ---
+        // --- Layout Resizing ---
+        const resizer = document.getElementById('resizer');
+        const gridArea = document.getElementById('gridArea');
+        const layoutContainer = document.getElementById('layoutContainer');
+        let isResizing = false;
+        let containerRect = null;
+
+        if (resizer) {
+            resizer.addEventListener('mousedown', (e) => {
+                isResizing = true;
+                e.preventDefault();
+                document.body.style.cursor = 'row-resize';
+                document.body.style.userSelect = 'none';
+                containerRect = layoutContainer.getBoundingClientRect();
+            });
+
+            document.addEventListener('mousemove', (e) => {
+                if (!isResizing || !containerRect) return;
+
+                requestAnimationFrame(() => {
+                    // gridArea starts after the filter area. 
+                    // To keep cursor on the handle, GridHeight = (MouseY - ContainerTop) - FilterHeight
+                    // But FilterHeight can vary. 
+                    // Easier approach: Calculate delta from the grid's top.
+                    const gridRect = gridArea.getBoundingClientRect();
+                    // We want the bottom of the grid to be at e.clientY
+                    // So newHeight = e.clientY - gridRect.top;
+
+                    let newGridHeight = e.clientY - gridRect.top;
+
+                    // Constraints
+                    const minHeight = 150;
+                    const maxHeight = containerRect.height - 150;
+
+                    if (newGridHeight < minHeight) newGridHeight = minHeight;
+                    if (newGridHeight > maxHeight) newGridHeight = maxHeight;
+
+                    gridArea.style.flex = 'none';
+                    gridArea.style.height = newGridHeight + 'px';
+                });
+            });
+
+            document.addEventListener('mouseup', () => {
+                if (isResizing) {
+                    isResizing = false;
+                    document.body.style.cursor = '';
+                    document.body.style.userSelect = '';
+                }
+            });
+
+            // Double click to reset
+            resizer.addEventListener('dblclick', () => {
+                gridArea.style.flex = '0 0 50%';
+                gridArea.style.height = 'auto'; // Let flex take over
+            });
+        }
+
+        // --- Tab Logic ---
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-btn').forEach(b => {
+                b.classList.remove('active');
+                b.style.color = "var(--text-secondary)";
+                b.style.borderBottom = "2px solid transparent";
+            });
+
+            document.getElementById('tab-detail').style.display = 'none';
+            document.getElementById('tab-logs').style.display = 'none';
+
+            if (tabName === 'detail') {
+                const btn = document.querySelector('button[onclick="switchTab(\'detail\')"]');
+                btn.classList.add('active');
+                btn.style.color = "var(--primary-accent)";
+                btn.style.borderBottom = "2px solid var(--primary-accent)";
+                document.getElementById('tab-detail').style.display = 'block';
+            } else {
+                const btn = document.querySelector('button[onclick="switchTab(\'logs\')"]');
+                btn.classList.add('active');
+                btn.style.color = "var(--primary-accent)";
+                btn.style.borderBottom = "2px solid var(--primary-accent)";
+                // Ensure display is set to flex as defined in HTML style attribute for correct layout
+                document.getElementById('tab-logs').style.display = 'flex';
+                if (selectedUserId) loadUserLogs(currentLogPage);
+            }
+        }
+
+        // --- Data Loading ---
+        async function loadUsers(page) {
+            usersPage = page;
+            const cat = document.getElementById('searchCategory').value;
+            const key = document.getElementById('searchKeyword').value;
+            const pageSize = document.getElementById('userPageSize').value;
+
+            try {
+                const res = await fetch(`/system/api/users?page=${page}&per_page=${pageSize}&category=${cat}&keyword=${key}`);
+                const data = await res.json();
+
+                const tbody = document.getElementById('usersTableBody');
+                tbody.innerHTML = '';
+
+                if (data.data && data.data.length > 0) {
+                    data.data.forEach(u => {
+                        const tr = document.createElement('tr');
+                        tr.style.cursor = 'pointer';
+                        tr.style.borderBottom = '1px solid var(--border-color)';
+                        tr.onclick = () => selectUser(u.id, tr);
+                        tr.ondblclick = () => { selectUser(u.id, tr); openEditModal(); };
+
+                        if (selectedUserId === u.id) {
+                            tr.classList.add('selected-row'); // Assume dashboard.css has this or add inline
+                            tr.style.background = 'var(--bg-hover)';
+                        }
+
+                        tr.onmouseover = () => { if (selectedUserId !== u.id) tr.style.background = 'var(--bg-hover)'; }
+                        tr.onmouseout = () => { if (selectedUserId !== u.id) tr.style.background = 'transparent'; }
+
+                        const lockedBadge = u.is_locked
+                            ? `<span style="padding:2px 6px; border-radius:4px; font-size:0.75rem; background:#fee2e2; color:#991b1b">Locked</span>`
+                            : `<span style="padding:2px 6px; border-radius:4px; font-size:0.75rem; background:#dcfce7; color:#166534">Active</span>`;
+
+                        tr.innerHTML = `
+                            <td style="padding:0.6rem;">${u.id}</td>
+                            <td style="padding:0.6rem;">${u.username}</td>
+                            <td style="padding:0.6rem;">${u.email}</td>
+                            <td style="padding:0.6rem;">${new Date(u.created_at).toLocaleDateString()}</td>
+                            <td style="padding:0.6rem;">${u.last_login_at ? new Date(u.last_login_at).toLocaleString() : '-'}</td>
+                            <td style="padding:0.6rem;">${lockedBadge}</td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+                } else {
+                    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:2rem; color:var(--text-secondary);">{{ messages.dashboard.msg_no_users }}</td></tr>`;
+                }
+
+                const totalPages = Math.ceil(data.total / pageSize);
+                document.getElementById('uPageInfo').innerText = `${usersPage} / ${totalPages || 1}`;
+                document.getElementById('uPrev').disabled = usersPage <= 1;
+                document.getElementById('uNext').disabled = usersPage >= totalPages;
+
+            } catch (e) { console.error(e); }
+        }
+
+        function changeUserPage(delta) { loadUsers(usersPage + delta); }
+
+        async function selectUser(userId, trElement) {
+            selectedUserId = userId;
+
+            // Highlight reset
+            const rows = document.getElementById('usersTableBody').querySelectorAll('tr');
+            rows.forEach(r => {
+                r.style.background = 'transparent';
+                r.classList.remove('selected-row');
+            });
+            if (trElement) {
+                trElement.style.background = 'var(--bg-hover)';
+                trElement.classList.add('selected-row');
+            }
+
+            document.getElementById('btnEdit').disabled = false;
+            document.getElementById('btnEdit').style.background = 'var(--primary-accent)';
+            document.getElementById('btnEdit').style.color = 'white';
+            document.getElementById('btnEdit').style.border = 'none';
+
+            try {
+                const res = await fetch(`/system/api/users/${userId}`);
+                const u = await res.json();
+                selectedUserObj = u;
+
+                if (u.error) { alert(u.error); return; }
+
+                const lockedStatus = u.is_locked ? 'Locked' : 'Active';
+
+                const html = `
+                    <div class="detail-grid">
+                        <div class="detail-row"><span class="detail-label">{{ messages.dashboard.detail_userid }}</span><div class="detail-value">${u.id}</div></div>
+                        <div class="detail-row"><span class="detail-label">{{ messages.dashboard.detail_username }}</span><div class="detail-value">${u.username}</div></div>
+                        <div class="detail-row"><span class="detail-label">{{ messages.dashboard.detail_email }}</span><div class="detail-value">${u.email}</div></div>
+                        <div class="detail-row"><span class="detail-label">{{ messages.dashboard.detail_status }}</span><div class="detail-value">${lockedStatus}</div></div>
+                        <div class="detail-row"><span class="detail-label">{{ messages.dashboard.detail_failed_login }}</span><div class="detail-value">${u.failed_login_count}</div></div>
+                        <div class="detail-row"><span class="detail-label">{{ messages.dashboard.detail_locked_until }}</span><div class="detail-value">${u.locked_until || '-'}</div></div>
+                        <div class="detail-row"><span class="detail-label">{{ messages.dashboard.detail_created }}</span><div class="detail-value">${new Date(u.created_at).toLocaleString()}</div></div>
+                        <div class="detail-row"><span class="detail-label">{{ messages.dashboard.detail_last_login }}</span><div class="detail-value">${u.last_login_at ? new Date(u.last_login_at).toLocaleString() : '-'}</div></div>
+                    </div>
+                `;
+                document.getElementById('userDetailContent').innerHTML = html;
+
+                if (document.getElementById('tab-logs').style.display === 'flex') {
+                    loadUserLogs(1);
+                } else {
+                    currentLogPage = 1;
+                }
+
+            } catch (e) { console.error(e); }
+        }
+
+        async function loadUserLogs(page) {
+            if (!selectedUserId) return;
+            currentLogPage = page;
+            try {
+                // Ensure this endpoint exists in dashboard/routes.py or system_management.py
+                const res = await fetch(`/system/api/users/${selectedUserId}/logs?page=${page}&per_page=10`);
+                const data = await res.json();
+
+                const tbody = document.getElementById('userLogsBody');
+                tbody.innerHTML = '';
+
+                // Load templates if needed (globally cached for this view)
+                if (!window.userLogTemplates) {
+                    try {
+                        const tRes = await fetch('/dashboard/api/templates');
+                        const tData = await tRes.json();
+                        if (tData.success) window.userLogTemplates = tData.templates;
+                    } catch (e) { console.error('Failed to load templates for user view', e); }
+                }
+
+                if (data.data && data.data.length > 0) {
+                    data.data.forEach(l => {
+                        const getTmplName = (id) => {
+                            if (!id) return '-';
+                            const t = window.userLogTemplates ? window.userLogTemplates.find(x => x.id == id) : null;
+                            return t ? `[${t.id}] ${t.category}` : `[${id}]`;
+                        };
+
+                        const tmplDisplay = getTmplName(l.predicted_template_id);
+
+                        tbody.innerHTML += `
+                            <tr onclick="toggleUserLogDetail(${l.id}, this)" style="cursor:pointer;" class="user-log-row">
+                                <td style="padding:0.5rem; text-align:right;">${l.id || '-'}</td>
+                                <td style="padding:0.5rem; text-align:center;">${new Date(l.request_time).toLocaleString()}</td>
+                                <td style="padding:0.5rem;" title="${l.query_text}"><div class="truncate">${l.query_text.length > 100 ? l.query_text.substring(0, 100) + '...' : l.query_text}</div></td>
+                                <td style="padding:0.5rem; text-align:left;">${tmplDisplay}</td>
+                                <td style="padding:0.5rem; text-align:center;">${l.manual_answer ? `<span class="status-badge success">{{ messages.dashboard.feedback_badge|default('Feedback') }}</span>` : '-'}</td>
+                            </tr>
+                            <tr id="u-detail-${l.id}" style="display:none; background-color: var(--bg-secondary); cursor: default;" onmouseover="this.style.background='var(--bg-secondary)'" onmouseout="this.style.background='var(--bg-secondary)'">
+                                <td colspan="5" style="padding:1rem;">
+                                     <div class="log-detail-content">
+                                        <div class="detail-section">
+                                            <h4 style="margin-bottom:0.5rem; font-size:0.9rem; color:var(--text-secondary);">{{ messages.dashboard.detail_query_full }}</h4>
+                                            <div style="padding:0.5rem; background:var(--bg-card); border:1px solid var(--border-color); border-radius:4px; color:var(--text-primary);">${l.query_text}</div>
+                                        </div>
+                                        
+                                        <div class="detail-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1rem;">
+                                            <div class="detail-section">
+                                                <h4 style="margin-bottom:0.5rem; font-size:0.9rem; color:var(--text-secondary);">{{ messages.dashboard.detail_ranks }}</h4>
+                                                <ul style="list-style:none; padding:0; font-size: 0.9rem;">
+                                                    <li style="margin-bottom: 4px;"><strong>Rank 1:</strong> ${getTmplName(l.rank1_id)}</li>
+                                                    <li style="margin-bottom: 4px;"><strong>Rank 2:</strong> ${getTmplName(l.rank2_id)}</li>
+                                                    <li style="margin-bottom: 4px;"><strong>Rank 3:</strong> ${getTmplName(l.rank3_id)}</li>
+                                                </ul>
+                                            </div>
+                                            <div class="detail-section">
+                                                <h4 style="margin-bottom:0.5rem; font-size:0.9rem; color:var(--text-secondary);">{{ messages.dashboard.detail_extracted }}</h4>
+                                                <ul style="list-style:none; padding:0; font-size: 0.9rem;">
+                                                    <li style="margin-bottom: 4px;"><strong>Client IP:</strong> ${l.client_ip || '-'}</li>
+                                                    <li style="margin-bottom: 4px;"><strong>Process Time:</strong> ${l.processing_time ? Number(l.processing_time).toFixed(4) + 's' : '-'}</li>
+                                                    <li style="margin-bottom: 4px;"><strong>Customer #:</strong> ${l.customer_number || '-'}</li>
+                                                </ul>
+                                            </div>
+                                        </div>
+
+                                        ${l.manual_answer ? `
+                                        <div class="detail-section" style="margin-top: 1rem;">
+                                            <h4 style="margin-bottom:0.5rem; font-size:0.9rem; color:var(--text-secondary);">{{ messages.dashboard.detail_feedback_content }}</h4>
+                                            <div style="padding:0.5rem; background:var(--bg-card); border:1px solid var(--border-color); border-radius:4px; color:var(--text-primary);">
+                                                <div style="margin-bottom:0.5rem;"><strong>Category:</strong> ${l.manual_category || '-'}</div>
+                                                <div style="white-space:pre-wrap;">${l.manual_answer}</div>
+                                            </div>
+                                        </div>
+                                        ` : ''}
+                                     </div>
+                                </td>
+                            </tr>
+                        `;
+                    });
+                } else {
+                    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:1rem;">{{ messages.dashboard.msg_no_logs }}</td></tr>';
+                }
+
+                const totalPages = Math.ceil(data.total / 10);
+                document.getElementById('lPageInfo').innerText = `${currentLogPage} / ${totalPages || 1}`;
+                document.getElementById('lPrev').disabled = currentLogPage <= 1;
+                document.getElementById('lNext').disabled = currentLogPage >= totalPages;
+
+            } catch (e) { console.error(e); }
+        }
+        function toggleUserLogDetail(id, trElem) {
+            // 1. Identify current state of THIS row's detail
+            const detailRow = document.getElementById(`u-detail-${id}`);
+            const isCurrentlyVisible = detailRow && detailRow.style.display !== 'none';
+
+            // 2. Close ALL details (Global Accordion Reset)
+            document.querySelectorAll('[id^="u-detail-"]').forEach(r => r.style.display = 'none');
+
+            // 3. Reset ALL Row Selections
+            document.querySelectorAll('.user-log-row').forEach(r => {
+                r.classList.remove('selected-log-row');
+                r.style.background = 'transparent';
+            });
+
+            // 4. If it was NOT visible before click, Open it and Select the row (Expand)
+            // If it WAS visible, we leave it closed (Collapse) and deselected.
+            if (!isCurrentlyVisible) {
+                if (detailRow) detailRow.style.display = 'table-row';
+                trElem.classList.add('selected-log-row');
+                trElem.style.background = 'var(--bg-hover)';
+            }
+        }
+
+        function changeLogPage(delta) { loadUserLogs(currentLogPage + delta); }
+
+        function openCreateModal() {
+            document.getElementById('createUserModal').style.display = 'flex';
+            document.getElementById('new_id').value = '';
+            document.getElementById('new_name').value = '';
+            document.getElementById('new_email').value = '';
+            document.getElementById('new_password').value = '';
+        }
+
+        function openEditModal() {
+            if (!selectedUserObj) return;
+            document.getElementById('editUserModal').style.display = 'flex';
+            document.getElementById('edit_id_hidden').value = selectedUserObj.id;
+            document.getElementById('edit_id').value = selectedUserObj.id;
+            document.getElementById('edit_name').value = selectedUserObj.username;
+            document.getElementById('edit_email').value = selectedUserObj.email;
+            document.getElementById('edit_password').value = '';
+            document.getElementById('edit_unlock').checked = selectedUserObj.is_locked;
+        }
+
+        function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+
+        async function createUser(e) {
+            e.preventDefault();
+            const pw = document.getElementById('new_password').value;
+            const pwConfirm = document.getElementById('new_password_confirm').value;
+
+            if (pw !== pwConfirm) {
+                alert('{{ messages.login.msg_password_mismatch|default("Passwords do not match") }}');
+                return;
+            }
+
+            const body = {
+                id: document.getElementById('new_id').value,
+                username: document.getElementById('new_name').value,
+                email: document.getElementById('new_email').value,
+                password: pw
+            };
+            try {
+                const res = await fetch('/system/api/users', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+                const data = await res.json();
+                if (data.success) {
+                    alert('Success');
+                    closeModal('createUserModal');
+                    loadUsers(1);
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            } catch (e) { alert('Failed to create user'); }
+        }
+
+        async function updateUser(e) {
+            e.preventDefault();
+            const id = document.getElementById('edit_id_hidden').value;
+            const body = {
+                username: document.getElementById('edit_name').value,
+                email: document.getElementById('edit_email').value,
+                password: document.getElementById('edit_password').value || null,
+                is_locked: document.getElementById('edit_unlock').checked
+            };
+            try {
+                const res = await fetch(`/system/api/users/${id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+                const data = await res.json();
+                if (data.success) {
+                    alert('{{ messages.dashboard.msg_update_success }}');
+                    closeModal('editUserModal');
+                    loadUsers(usersPage); // Keep current page
+                    selectUser(id);
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            } catch (e) { alert('Failed to update user'); }
+        }
+
+        window.onload = function () {
+            loadUsers(1);
+        }
+    </script>
+</body>
+
+</html>

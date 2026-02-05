@@ -1,0 +1,822 @@
+<!DOCTYPE html>
+<html lang="{{ current_language|default('ko') }}" data-theme="{{ current_theme|default('mono') }}">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
+    <title>템플릿 관리</title>
+    <!-- Use dashboard layout links to ensure consistency -->
+    <link rel="stylesheet" href="{{ url_for('dashboard.static', filename='vendor/css/inter.css') }}">
+    <link rel="stylesheet" href="{{ url_for('dashboard.static', filename='vendor/css/fontawesome.all.min.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/themes.css') }}">
+    <!-- Load dashboard css for shared styles -->
+    <link rel="stylesheet" href="{{ url_for('dashboard.static', filename='css/dashboard.css') }}">
+    <style>
+        .layout-container {
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+            height: calc(100vh - 80px);
+            overflow: hidden;
+            position: relative;
+        }
+
+        .grid-area {
+            background: var(--card-bg);
+            /* flex: 0 0 40% handled inline or by JS */
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+        }
+
+        .resize-handle {
+            width: 8px;
+            height: 100%;
+            background: var(--bg-main);
+            cursor: col-resize;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 0;
+        }
+
+        .resize-handle:hover {
+            background: var(--primary-accent);
+        }
+
+        .resize-handle::after {
+            content: '';
+            width: 4px;
+            height: 40px;
+            background: #cbd5e1;
+            border-radius: 2px;
+        }
+
+        .tab-area {
+            background: var(--card-bg);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+            padding: 1rem;
+        }
+
+        .detail-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1rem;
+            padding: 1rem;
+        }
+
+        .detail-row {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .detail-label {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+        }
+
+        .detail-value {
+            padding: 0.6rem;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            background: var(--bg-secondary);
+            font-size: 0.9rem;
+            color: var(--text-primary);
+            white-space: pre-wrap;
+            min-height: 40px;
+        }
+
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 9999;
+            justify-content: center;
+            align-items: center;
+            backdrop-filter: blur(2px);
+        }
+
+        .modal-content {
+            background: var(--card-bg);
+            padding: 2rem;
+            border-radius: 8px;
+            width: 800px;
+            max-width: 95%;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            border: 1px solid var(--card-border);
+            max-height: 95vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            font-size: 1.25rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            color: var(--text-primary);
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 0.6rem;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            background: var(--bg-input);
+            color: var(--text-primary);
+            font-size: 0.95rem;
+        }
+
+        .form-textarea {
+            width: 100%;
+            padding: 0.6rem;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            background: var(--bg-input);
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            min-height: 400px;
+            resize: vertical;
+            font-family: inherit;
+        }
+
+        .btn-group {
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.75rem;
+            margin-top: 2rem;
+        }
+
+        .btn {
+            padding: 0.4rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            font-weight: 600;
+            border: 1px solid transparent;
+        }
+
+        .btn-primary {
+            background: var(--primary-accent);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: var(--bg-secondary);
+            color: var(--text-secondary);
+            border-color: var(--border-color);
+        }
+
+        .btn-cancel {
+            background: transparent;
+            color: var(--text-secondary);
+            border: 1px solid var(--border-color);
+        }
+
+        [data-theme="mono"] .logs-table,
+        [data-theme="mono"] .logs-table th {
+            border-width: 1px !important;
+        }
+
+        .selected-row {
+            background-color: rgba(59, 130, 246, 0.15) !important;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="dashboard-container">
+        <!-- Sidebar -->
+        <aside class="sidebar collapsed">
+            <div class="logo">
+                <div style="display:flex; align-items:center; gap:0.75rem; overflow:hidden;">
+                    <i class="fas fa-robot" style="font-size: 1.5rem;"></i>
+                    <span style="white-space: pre-line; font-size: 1.5rem; line-height: 1.2; font-weight: 700;">{{
+                        messages.dashboard.admin_title }}</span>
+                </div>
+                <i class="fas fa-chevron-left" id="sidebarToggle"
+                    style="cursor: pointer; margin-left: auto; transition: transform 0.3s; color: var(--text-secondary);"></i>
+            </div>
+            <nav class="nav-menu" style="flex:1;">
+                <a href="/"><i class="fas fa-home"></i> <span>{{ messages.dashboard.nav_main }}</span></a>
+                <a href="/dashboard"><i class="fas fa-chart-line"></i> <span>{{ messages.dashboard.nav_dashboard
+                        }}</span></a>
+
+                <!-- System Management Accordion -->
+                <div class="nav-group">
+                    <button class="accordion-btn active" onclick="toggleAccordion(this)">
+                        <span><i class="fas fa-cogs"></i> <span>{{ messages.dashboard.nav_system }}</span></span>
+                        <i class="fas fa-chevron-down"></i>
+                    </button>
+                    <div class="accordion-content open">
+                        <a href="/system/users">
+                            <i class="fas fa-users"></i>
+                            <span>{{ messages.dashboard.nav_users }}</span>
+                        </a>
+                        <a href="/system/templates" class="active">
+                            <i class="fas fa-file-alt"></i>
+                            <span>{{ messages.dashboard.nav_templates }}</span>
+                        </a>
+                    </div>
+                </div>
+            </nav>
+        </aside>
+
+        <main class="main-content" style="padding:0; overflow:hidden; display:flex; flex-direction:column;">
+            <header class="top-bar"
+                style="justify-content: space-between; padding: 1rem 1.5rem; margin-bottom:0; background:var(--bg-main); flex-shrink:0;">
+                <div style="display:flex; align-items:center; gap:1rem;">
+                    <h2 style="font-size:1.2rem; font-weight:700;">템플릿 관리</h2>
+                </div>
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <div
+                        style="display:flex; gap:0px; border:1px solid var(--border-color); border-radius:4px; overflow:hidden; margin-right: 1rem;">
+                        <button onclick="downloadTemplates('json')" class="btn"
+                            style="background:var(--bg-secondary); color:var(--text-secondary); border-radius:0; border:none; border-right:1px solid var(--border-color);">JSON</button>
+                        <button onclick="downloadTemplates('excel')" class="btn"
+                            style="background:var(--bg-secondary); color:var(--text-secondary); border-radius:0; border:none;">Excel</button>
+                    </div>
+                    <button onclick="openEditModal()" id="btnEdit" class="btn btn-secondary" disabled>
+                        <i class="fas fa-edit"></i> 답변 수정
+                    </button>
+                </div>
+            </header>
+
+            <div class="layout-container" id="layoutContainer">
+                <!-- 1. Filter Area (Top) -->
+                <div class="card filter-area"
+                    style="background: var(--bg-card); padding: 1rem; margin: 0 1rem 1rem 1rem; border:1px solid var(--border-color); border-radius:6px; display:flex; gap:1rem; align-items:flex-end; flex-wrap:wrap; flex-shrink: 0;">
+                    <div style="display:flex; flex-direction:column; gap:0.25rem;">
+                        <label style="font-size:0.8rem; font-weight:600; color:var(--text-secondary);">카테고리</label>
+                        <select id="searchCategory"
+                            style="padding:0.4rem; border:1px solid var(--border-color); border-radius:4px; font-size:0.9rem; min-width:200px; background:var(--bg-secondary); color:var(--text-primary);">
+                            <option value="">전체</option>
+                            {% for t in templates %}
+                            <option value="{{ t.id }}">[{{ t.id }}] {{ t.inquiry_category }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div style="display:flex; flex-direction:column; gap:0.25rem; flex:1;">
+                        <label style="font-size:0.8rem; font-weight:600; color:var(--text-secondary);">답변 템플릿</label>
+                        <input type="text" id="searchKeyword" onkeypress="if(event.key==='Enter') loadTemplates()"
+                            placeholder="검색어를 입력하세요..."
+                            style="padding:0.4rem; border:1px solid var(--border-color); border-radius:4px; font-size:0.9rem; width:100%; background:var(--bg-input); color:var(--text-primary);">
+                    </div>
+
+                    <button onclick="loadTemplates()" class="btn btn-primary">
+                        <i class="fas fa-search"></i> 검색
+                    </button>
+                </div>
+
+                <!-- 2. Split Content (Bottom) -->
+                <div class="split-content" style="display:flex; flex:1; overflow:hidden; padding-bottom:1rem;">
+                    <!-- List Area (Left 40%) -->
+                    <div class="grid-area" id="gridArea" style="flex: 0 0 40%; margin: 0 0 0 1rem;">
+                        <div style="overflow-y: auto; flex:1;">
+                            <table class="logs-table" style="width:100%; border-collapse: collapse;">
+                                <thead
+                                    style="position:sticky; top:0; background:var(--bg-card); z-index:10; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+                                    <tr>
+                                        <th style="width: 60px;">ID</th>
+                                        <th>카테고리</th>
+                                        <th style="width: 80px;">변경횟수</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="templatesTableBody">
+                                    <!-- Data -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Resizer (Vertical) -->
+                    <div class="resize-handle" id="resizer"></div>
+
+                    <div class="tab-area" id="detailArea"
+                        style="flex:1; margin: 0 1rem 0 0; display:flex; flex-direction:column; padding:0;">
+                        <!-- Tabs Header -->
+                        <div
+                            style="display:flex; border-bottom:1px solid var(--border-color); background:var(--bg-secondary);">
+                            <button class="tab-btn active" onclick="switchTab('info')" id="tab-btn-info"
+                                style="padding:0.8rem 1.5rem; border:none; background:transparent; font-weight:600; cursor:pointer; border-bottom:2px solid var(--primary-accent); color:var(--text-primary);">기본
+                                정보</button>
+                            <button class="tab-btn" onclick="switchTab('history')" id="tab-btn-history"
+                                style="padding:0.8rem 1.5rem; border:none; background:transparent; font-weight:600; cursor:pointer; color:var(--text-secondary);">변경
+                                이력</button>
+                        </div>
+
+                        <!-- Tab Content: Info -->
+                        <div id="tab-content-info"
+                            style="display:flex; flex-direction:column; gap:1rem; padding:1rem; flex:1; overflow-y:auto;">
+                            <p id="info-placeholder"
+                                style="text-align:center; color: var(--text-secondary); margin-top:2rem; font-size:0.9rem;">
+                                목록에서 템플릿을 선택하세요.
+                            </p>
+                            <div id="info-details" style="display:none; flex-direction:column; gap:1rem; height:100%;">
+                                <!-- Content injected via JS -->
+                            </div>
+                        </div>
+
+                        <!-- Tab Content: History -->
+                        <div id="tab-content-history"
+                            style="display:none; flex-direction:column; flex:1; overflow:hidden;">
+                            <!-- History List (Top 40%) -->
+                            <div style="flex: 0 0 40%; border-bottom:1px solid var(--border-color); overflow-y:auto;">
+                                <table class="logs-table"
+                                    style="width:100%; border-collapse: collapse; font-size:0.85rem;">
+                                    <thead style="position:sticky; top:0; background:var(--bg-card); z-index:5;">
+                                        <tr>
+                                            <th style="padding:0.5rem; width:180px;">일자</th>
+                                            <th style="padding:0.5rem; width:80px;">ID</th>
+                                            <th style="padding:0.5rem;">카테고리</th>
+                                            <th style="padding:0.5rem; width:100px;">변경자</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="historyTableBody">
+                                        <tr>
+                                            <td colspan="4"
+                                                style="padding:1rem; text-align:center; color:var(--text-secondary);">
+                                                데이터 없음</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <!-- Diff View (Bottom 60%) -->
+                            <div
+                                style="flex:1; display:flex; flex-direction:column; padding:1rem; overflow-y:auto; gap:0.5rem; background:var(--bg-secondary);">
+                                <div style="display:flex; gap:1rem; height:100%;">
+                                    <div style="flex:1; display:flex; flex-direction:column; gap:0.25rem;">
+                                        <label
+                                            style="font-size:0.8rem; font-weight:700; color:var(--text-secondary);">변경 전
+                                            (AS-IS)</label>
+                                        <textarea id="diff-asis" readonly
+                                            style="flex:1; padding:0.5rem; border:1px solid var(--border-color); border-radius:4px; resize:none; font-size:0.85rem; background:var(--card-bg); color:var(--text-primary);"></textarea>
+                                    </div>
+                                    <div style="flex:1; display:flex; flex-direction:column; gap:0.25rem;">
+                                        <label
+                                            style="font-size:0.8rem; font-weight:700; color:var(--primary-accent);">변경 후
+                                            (TO-BE)</label>
+                                        <textarea id="diff-tobe" readonly
+                                            style="flex:1; padding:0.5rem; border:1px solid var(--border-color); border-radius:4px; resize:none; font-size:0.85rem; background:var(--card-bg); color:var(--text-primary);"></textarea>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Edit Template Modal -->
+    <div id="editTemplateModal" class="modal-overlay" onclick="closeModal('editTemplateModal')">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <div class="modal-header">답변 수정</div>
+            <form onsubmit="updateTemplate(event)">
+                <input type="hidden" id="edit_id">
+                <div class="form-group">
+                    <label class="form-label">카테고리</label>
+                    <input type="text" id="edit_category" class="form-input" disabled
+                        style="background:var(--bg-secondary);">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" style="display:flex; justify-content:space-between; align-items:center;">
+                        답변 내용
+                        <button type="button" id="btn-masking" class="btn btn-secondary"
+                            style="font-size:0.75rem; padding:0.2rem 0.5rem; display:none;"
+                            onclick="toggleMasking()">Masking
+                            OFF</button>
+                    </label>
+                    <textarea id="edit_answer" class="form-textarea" required></textarea>
+                </div>
+                <div class="btn-group">
+                    <button type="button" class="btn btn-cancel" onclick="closeModal('editTemplateModal')">취소</button>
+                    <button type="submit" class="btn btn-primary">저장</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="{{ url_for('dashboard.static', filename='js/dashboard.js') }}"></script>
+    <script>
+        // Use logic similar to users.html for interaction
+
+        let allTemplates = {{ templates | tojson }};
+        let currentTemplates = [...allTemplates];
+        let selectedTemplateId = null;
+
+        // --- Layout Resizing ---
+        const resizer = document.getElementById('resizer');
+        const gridArea = document.getElementById('gridArea');
+        const layoutContainer = document.getElementById('layoutContainer');
+        let isResizing = false;
+        let containerRect = null;
+
+        if (resizer) {
+            resizer.addEventListener('mousedown', (e) => {
+                isResizing = true;
+                e.preventDefault();
+                document.body.style.cursor = 'col-resize';
+                document.body.style.userSelect = 'none';
+                // Container is the valid split-content area
+                containerRect = gridArea.parentElement.getBoundingClientRect();
+            });
+
+            document.addEventListener('mousemove', (e) => {
+                if (!isResizing || !containerRect) return;
+
+                // Calculate width. 
+                // e.clientX is absolute. containerRect.left is start.
+                let newWidth = e.clientX - containerRect.left - 16; // -16 for left margin if any
+
+                // Adjust for margin: The grid has margin-left: 1rem (16px)
+                // simpler: offset relative to container left
+
+                // Constraints
+                const minWidth = 300;
+                const maxWidth = containerRect.width - 400; // Keep at least 400px for detail
+
+                if (newWidth < minWidth) newWidth = minWidth;
+                if (newWidth > maxWidth) newWidth = maxWidth;
+
+                gridArea.style.flex = 'none';
+                gridArea.style.width = newWidth + 'px';
+            });
+
+            document.addEventListener('mouseup', () => {
+                if (isResizing) {
+                    isResizing = false;
+                    document.body.style.cursor = '';
+                    document.body.style.userSelect = '';
+                }
+            });
+            resizer.addEventListener('dblclick', () => {
+                gridArea.style.flex = '0 0 40%';
+                gridArea.style.width = 'auto';
+            });
+        }
+
+        // --- Initial Load ---
+        // --- Initial Load ---
+        window.addEventListener('DOMContentLoaded', () => {
+            renderTable(currentTemplates);
+
+            // Restore selection if exists
+            const lastId = localStorage.getItem('lastSelectedTemplateId');
+            if (lastId) {
+                localStorage.removeItem('lastSelectedTemplateId'); // Clean up
+                const rows = document.querySelectorAll('#templatesTableBody tr');
+                for (let tr of rows) {
+                    const idCell = tr.querySelector('td:first-child');
+                    if (idCell && idCell.textContent.trim() == lastId) {
+                        selectTemplate(parseInt(lastId), tr);
+                        // Also scroll into view
+                        tr.scrollIntoView({ block: 'center' });
+                        break;
+                    }
+                }
+            }
+        });
+
+        // --- Search Logic ---
+        function loadTemplates() {
+            const catSelect = document.getElementById('searchCategory');
+            const keyword = document.getElementById('searchKeyword').value.toLowerCase();
+            const selectedCatId = catSelect.value; // ID
+
+            currentTemplates = allTemplates.filter(t => {
+                const matchCat = selectedCatId === "" || String(t.id) === selectedCatId;
+                const matchKeyword = !keyword || (t.general_template && t.general_template.toLowerCase().includes(keyword));
+                return matchCat && matchKeyword;
+            });
+
+            renderTable(currentTemplates);
+        }
+
+        function renderTable(data) {
+            const tbody = document.getElementById('templatesTableBody');
+            tbody.innerHTML = '';
+
+            if (data.length > 0) {
+                data.forEach(t => {
+                    const tr = document.createElement('tr');
+                    tr.style.cursor = 'pointer';
+                    tr.style.borderBottom = '1px solid var(--border-color)';
+                    tr.onclick = () => selectTemplate(t.id, tr);
+                    tr.ondblclick = () => { selectTemplate(t.id, tr); openEditModal(); };
+
+                    if (selectedTemplateId === t.id) {
+                        tr.classList.add('selected-row');
+                        tr.style.background = 'var(--bg-hover)';
+                    }
+
+                    tr.onmouseover = () => { if (selectedTemplateId !== t.id) tr.style.background = 'var(--bg-hover)'; }
+                    tr.onmouseout = () => { if (selectedTemplateId !== t.id) tr.style.background = 'transparent'; }
+
+                    const changeCount = (t.change_count !== undefined && t.change_count !== null) ? t.change_count : '';
+
+                    tr.innerHTML = `
+                        <td style="padding:0.6rem; text-align:center;">${t.id}</td>
+                        <td style="padding:0.6rem;">${t.inquiry_category}</td>
+                        <td style="padding:0.6rem; text-align:center;">${changeCount}</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            } else {
+                tbody.innerHTML = `<tr><td colspan="3" style="text-align:center; padding:2rem; color:var(--text-secondary);">검색 결과가 없습니다.</td></tr>`;
+            }
+        }
+
+        let currentLogs = [];
+
+        function selectTemplate(id, trElement) {
+            selectedTemplateId = id;
+
+            // UI Update - Row Selection
+            const rows = document.getElementById('templatesTableBody').querySelectorAll('tr');
+            rows.forEach(r => {
+                r.style.background = 'transparent';
+                r.classList.remove('selected-row');
+            });
+            if (trElement) {
+                trElement.style.background = 'var(--bg-hover)';
+                trElement.classList.add('selected-row');
+            }
+
+            // Enable Edit
+            document.getElementById('btnEdit').disabled = false;
+            document.getElementById('btnEdit').classList.remove('btn-secondary');
+            document.getElementById('btnEdit').classList.add('btn-primary');
+
+            // Render Info Tab Content
+            const t = allTemplates.find(x => x.id === id);
+            if (t) {
+                const html = `
+                    <div class="detail-row"><span class="detail-label">ID</span><div class="detail-value" style="min-height:auto;">${t.id}</div></div>
+                    <div class="detail-row"><span class="detail-label">카테고리</span><div class="detail-value" style="min-height:auto;">${t.inquiry_category}</div></div>
+                    <div class="detail-row" style="flex:1;"><span class="detail-label">답변 템플릿</span><div class="detail-value" style="height:100%; overflow-y:auto; min-height:300px;">${t.general_template || ''}</div></div>
+                `;
+                const infoDetails = document.getElementById('info-details');
+                const infoPlaceholder = document.getElementById('info-placeholder');
+
+                if (infoDetails) infoDetails.innerHTML = html;
+                if (infoPlaceholder) infoPlaceholder.style.display = 'none';
+                if (infoDetails) infoDetails.style.display = 'flex';
+
+                // Clear History Cache/View
+                const historyBody = document.getElementById('historyTableBody');
+                if (historyBody) historyBody.innerHTML = '';
+                const diffAsis = document.getElementById('diff-asis');
+                if (diffAsis) diffAsis.value = '';
+                const diffTobe = document.getElementById('diff-tobe');
+                if (diffTobe) diffTobe.value = '';
+                currentLogs = [];
+
+                // Maintain current active tab
+                const activeBtn = document.querySelector('.tab-btn.active');
+                const targetTab = (activeBtn && activeBtn.id === 'tab-btn-history') ? 'history' : 'info';
+                switchTab(targetTab);
+            }
+        }
+
+        function switchTab(tabName) {
+            // Update Buttons
+            document.querySelectorAll('.tab-btn').forEach(b => {
+                b.style.borderBottom = 'none';
+                b.style.color = 'var(--text-secondary)';
+                b.classList.remove('active');
+            });
+            const activeBtn = document.getElementById('tab-btn-' + tabName);
+            if (activeBtn) {
+                activeBtn.style.borderBottom = '2px solid var(--primary-accent)';
+                activeBtn.style.color = 'var(--text-primary)';
+                activeBtn.classList.add('active');
+            }
+
+            // Update Content
+            const infoContent = document.getElementById('tab-content-info');
+            const historyContent = document.getElementById('tab-content-history');
+
+            if (infoContent) infoContent.style.display = 'none';
+            if (historyContent) historyContent.style.display = 'none';
+
+            if (tabName === 'info') {
+                if (infoContent) infoContent.style.display = 'flex';
+            } else {
+                if (historyContent) historyContent.style.display = 'flex';
+                if (selectedTemplateId) {
+                    loadHistory(selectedTemplateId);
+                }
+            }
+        }
+
+        async function loadHistory(id) {
+            try {
+                // Show loading?
+                const res = await fetch(`/system/api/templates/${id}/logs`);
+                const logs = await res.json();
+                currentLogs = logs;
+                renderHistoryList(logs);
+            } catch (err) {
+                console.error(err);
+                const tbody = document.getElementById('historyTableBody');
+                if (tbody) tbody.innerHTML = `<tr><td colspan="4" style="padding:1rem;">오류 발생</td></tr>`;
+            }
+        }
+
+        function renderHistoryList(logs) {
+            const tbody = document.getElementById('historyTableBody');
+            if (!tbody) return;
+            tbody.innerHTML = '';
+
+            if (!logs || logs.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" style="padding:1rem; text-align:center; color:var(--text-secondary);">변경 이력이 없습니다.</td></tr>`;
+                return;
+            }
+
+            logs.forEach((log, index) => {
+                const tr = document.createElement('tr');
+                tr.style.cursor = 'pointer';
+                tr.style.borderBottom = '1px solid var(--border-color)';
+                tr.onclick = () => selectLog(log, tr);
+
+                // Format Date: YYYY-MM-DD HH:mm:ss
+                // Assuming log.log_time is string from DB or ISO format
+                let dateStr = '-';
+                if (log.log_time) {
+                    const d = new Date(log.log_time);
+                    if (!isNaN(d.getTime())) {
+                        const yyyy = d.getFullYear();
+                        const mm = String(d.getMonth() + 1).padStart(2, '0');
+                        const dd = String(d.getDate()).padStart(2, '0');
+                        const hh = String(d.getHours()).padStart(2, '0');
+                        const min = String(d.getMinutes()).padStart(2, '0');
+                        const ss = String(d.getSeconds()).padStart(2, '0');
+                        dateStr = `${yyyy}-${mm}-${dd} ${hh}:${min}:${ss}`;
+                    } else {
+                        dateStr = String(log.log_time);
+                    }
+                }
+
+                tr.innerHTML = `
+                    <td style="padding:0.5rem; text-align:center;">${dateStr}</td>
+                    <td style="padding:0.5rem; text-align:center;">${log.category_id || '-'}</td>
+                    <td style="padding:0.5rem; text-align:center;">${log.category || '-'}</td>
+                    <td style="padding:0.5rem; text-align:center;">${log.user_id || '-'}</td>
+                `;
+                tbody.appendChild(tr);
+
+                // Auto-select first log?
+                if (index === 0) {
+                    selectLog(log, tr);
+                }
+            });
+        }
+
+        function selectLog(log, trElement) {
+            const rows = document.getElementById('historyTableBody').querySelectorAll('tr');
+            rows.forEach(r => {
+                r.style.background = 'transparent';
+                r.classList.remove('selected-row');
+            });
+            if (trElement) {
+                // trElement.style.background = 'var(--bg-hover)'; // Handled by class
+                trElement.classList.add('selected-row');
+            }
+
+            const diffAsis = document.getElementById('diff-asis');
+            const diffTobe = document.getElementById('diff-tobe');
+            if (diffAsis) diffAsis.value = log.asis_answer || '';
+            if (diffTobe) diffTobe.value = log.tobe_answer || '';
+        }
+
+        // --- Masking Logic ---
+        let isMaskingActive = false;
+        let originalUnmaskedText = "";
+
+        function openEditModal() {
+            if (!selectedTemplateId) return;
+            const t = allTemplates.find(x => x.id === selectedTemplateId);
+            if (!t) return;
+
+            document.getElementById('edit_id').value = t.id;
+            document.getElementById('edit_category').value = t.inquiry_category;
+            document.getElementById('edit_answer').value = t.general_template;
+
+            // Reset Masking State
+            isMaskingActive = false;
+            originalUnmaskedText = "";
+            updateMaskingButtonUI();
+
+            document.getElementById('editTemplateModal').style.display = 'flex';
+        }
+
+        async function toggleMasking() {
+            const textarea = document.getElementById('edit_answer');
+            const text = textarea.value;
+
+            if (!isMaskingActive) {
+                // Turn ON
+                if (!text) return;
+                originalUnmaskedText = text; // Save snapshot
+
+                try {
+                    const res = await fetch('/system/api/templates/mask', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ text: text })
+                    });
+                    const result = await res.json();
+                    if (result.masked_text !== undefined) {
+                        textarea.value = result.masked_text;
+                        isMaskingActive = true;
+                        updateMaskingButtonUI();
+                    }
+                } catch (err) {
+                    alert('Masking 처리 중 오류가 발생했습니다: ' + err);
+                }
+            } else {
+                // Turn OFF
+                textarea.value = originalUnmaskedText; // Restore snapshot
+                isMaskingActive = false;
+                updateMaskingButtonUI();
+            }
+        }
+
+        function updateMaskingButtonUI() {
+            const btn = document.getElementById('btn-masking');
+            if (!btn) return;
+            if (isMaskingActive) {
+                btn.textContent = "Masking ON";
+                btn.classList.remove('btn-secondary');
+                btn.classList.add('btn-primary');
+            } else {
+                btn.textContent = "Masking OFF";
+                btn.classList.remove('btn-primary');
+                btn.classList.add('btn-secondary');
+            }
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).style.display = 'none';
+        }
+
+        async function updateTemplate(e) {
+            e.preventDefault();
+            const id = document.getElementById('edit_id').value;
+            const newAnswer = document.getElementById('edit_answer').value;
+
+            try {
+                const res = await fetch('/system/api/templates', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id: id, general_template: newAnswer })
+                });
+                const result = await res.json();
+
+                if (result.success) {
+                    alert('저장되었습니다.');
+                    localStorage.setItem('lastSelectedTemplateId', id);
+                    location.reload();
+                } else {
+                    alert('오류 발생: ' + result.error);
+                }
+            } catch (err) {
+                alert('통신 오류: ' + err);
+            }
+        }
+
+
+
+        function downloadTemplates(type) {
+            window.location.href = `/system/api/templates/export?type=${type}`;
+        }
+    </script>
+</body>
+
+</html>

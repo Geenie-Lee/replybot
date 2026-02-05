@@ -1,0 +1,510 @@
+/* UI Components */
+/* Cards */
+.content-card,
+.stat-box,
+.template-card,
+.data-card {
+    background: var(--card-bg);
+    border: var(--line-width) solid var(--card-border);
+    border-radius: var(--border-radius-lg);
+    box-shadow: var(--shadow-lg);
+}
+
+.content-card {
+    padding: 2.5rem;
+    margin-bottom: 2rem;
+}
+
+/* Inputs & Buttons */
+.input-group label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: var(--text-primary);
+}
+
+.input-group input,
+.input-group textarea {
+    width: 100%;
+    padding: 1rem 1.25rem;
+    background: var(--bg-secondary);
+    border: var(--line-width) solid var(--card-border);
+    border-radius: var(--border-radius-md);
+    color: var(--text-primary);
+    font-size: 1rem;
+    transition: 0.2s;
+    font-family: inherit;
+    resize: none;
+}
+
+.input-group input:focus,
+.input-group textarea:focus {
+    outline: none;
+    border-color: var(--primary-accent);
+    box-shadow: 4px 4px 0px var(--shadow-color);
+}
+
+.search-btn {
+    background: var(--card-bg);
+    color: var(--text-primary);
+    border: var(--line-width) solid var(--line-color);
+    padding: 1rem 2.5rem;
+    border-radius: var(--border-radius-md);
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.75rem;
+    box-shadow: 4px 4px 0px var(--shadow-color);
+}
+
+.search-btn:hover {
+    transform: translate(2px, 2px);
+    box-shadow: 2px 2px 0px var(--shadow-color);
+}
+
+/* Stat Boxes */
+.stat-box {
+    padding: 2.5rem;
+    display: flex;
+    gap: 1.25rem;
+    align-items: center;
+    transition: 0.3s;
+}
+
+.stat-box:hover {
+    border-color: var(--primary-accent);
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-lg);
+}
+
+.stat-box i {
+    font-size: 2.2rem;
+    color: var(--text-secondary);
+}
+
+.stat-box h3 {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.stat-box p {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    line-height: 1.2;
+}
+
+/* Tables */
+.data-card {
+    padding: 2.5rem;
+    overflow-x: auto;
+}
+
+table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+th {
+    color: var(--text-muted);
+    font-weight: 600;
+    padding: 1rem;
+    text-align: left;
+    border-bottom: 1px solid var(--card-border);
+}
+
+td {
+    padding: 1rem;
+    color: var(--text-secondary);
+    border-bottom: 1px solid rgba(51, 65, 85, 0.3);
+}
+
+/* Template Cards */
+.template-card {
+    padding: 2.5rem;
+    display: flex;
+    flex-direction: column;
+    transition: all 0.3s ease;
+    height: 100%;
+    background: var(--bg-card);
+    border: var(--line-width) solid var(--card-border);
+}
+
+.template-card:hover {
+    transform: translateY(-8px);
+    border-color: var(--text-primary);
+}
+
+.template-title {
+    font-weight: 700;
+    font-size: 1.15rem;
+    color: var(--text-primary);
+    margin-bottom: 0.75rem;
+}
+
+.template-tag {
+    font-size: 0.8rem;
+    background: var(--bg-secondary);
+    color: var(--text-secondary);
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-weight: 600;
+    display: inline-block;
+}
+
+.view-btn {
+    margin-top: auto;
+    width: 100%;
+    padding: 0.875rem;
+    background: transparent;
+    color: var(--text-secondary);
+    border: 1px solid var(--card-border);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-weight: 500;
+}
+
+.view-btn:hover {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+}
+
+/* Results Grid System (Replaces Tailwind) */
+.results-grid-container {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+    width: 100%;
+    max-width: 72rem;
+    margin: 0 auto;
+    padding-bottom: 2.5rem;
+}
+
+.results-grid-bottom {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+}
+
+@media (min-width: 768px) {
+    .results-grid-bottom {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+/* Result Cards */
+.result-card-new {
+    position: relative;
+    border-radius: 1rem;
+    transition: all 0.3s;
+    overflow: visible;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Top Rank 1 Card */
+.result-card-top {
+    background: var(--card-bg);
+    border: var(--line-width) solid var(--line-color);
+    padding: 2rem;
+    box-shadow: var(--shadow-lg);
+    z-index: 10;
+    border-radius: var(--border-radius-lg);
+}
+
+.result-card-top:hover {
+    border-color: var(--line-color);
+    box-shadow: var(--shadow-md);
+    transform: translate(4px, 4px);
+}
+
+/* Sub Rank Cards */
+.result-card-sub {
+    background: var(--card-bg);
+    border: var(--line-width) solid var(--line-color);
+    padding: 1.5rem;
+    box-shadow: var(--shadow-md);
+    border-radius: var(--border-radius-lg);
+}
+
+.result-card-sub:hover {
+    transform: translate(2px, 2px);
+    box-shadow: 2px 2px 0px var(--shadow-color);
+    border-color: var(--line-color);
+    background: var(--card-bg);
+}
+
+/* Result Elements */
+.rank-badge-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.text-gradient-silver {
+    background: none;
+    -webkit-background-clip: text;
+    color: var(--text-primary);
+}
+
+.rank-id {
+    font-size: 0.75rem;
+    font-weight: 400;
+    color: var(--text-muted);
+    margin-left: 0.5rem;
+}
+
+.result-meta {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    margin-bottom: 1rem;
+    display: flex;
+    gap: 1rem;
+}
+
+.meta-tag {
+    background: var(--bg-secondary);
+    color: var(--text-secondary);
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    border: 1px solid var(--card-border);
+}
+
+.result-content-pre {
+    font-family: inherit;
+    white-space: pre-wrap;
+    color: var(--text-primary);
+    line-height: 1.6;
+    background: var(--bg-secondary);
+    padding: 1.5rem;
+    border-radius: 0.75rem;
+    border: 2px solid var(--line-color);
+    overflow-y: auto;
+    max-height: 400px;
+    font-size: 0.875rem;
+}
+
+.result-content-sub {
+    font-family: inherit;
+    white-space: pre-wrap;
+    color: var(--text-primary);
+    font-size: 0.875rem;
+    line-height: 1.6;
+    max-height: 240px;
+    overflow-y: auto;
+}
+
+/* Custom Buttons */
+.btn-copy-sm,
+.btn-manual-sm {
+    padding: 0.5rem 1.25rem;
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    border: var(--line-width) solid var(--line-color);
+    background: var(--bg-secondary);
+    box-shadow: 2px 2px 0px var(--shadow-color);
+    font-weight: 600;
+    border-radius: var(--border-radius-md);
+}
+
+.btn-copy-sm:hover,
+.btn-manual-sm:hover {
+    transform: translate(1px, 1px);
+    box-shadow: 1px 1px 0px var(--shadow-color);
+    background: var(--bg-main);
+    color: var(--text-primary);
+}
+
+/* Modals */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(8px);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 10000;
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+.modal-overlay.open {
+    display: flex;
+    opacity: 1;
+}
+
+.modal-overlay.align-top {
+    align-items: flex-start;
+    padding-top: 10vh;
+}
+
+.modal-content {
+    background: var(--card-bg);
+    border: var(--line-width) solid var(--line-color);
+    color: var(--text-primary);
+    padding: 2rem;
+    border-radius: var(--border-radius-lg);
+    width: 90%;
+    max-width: 600px;
+    max-height: 80vh;
+    overflow-y: auto;
+    transform: translateY(20px);
+    transition: transform 0.3s;
+    box-shadow: 8px 8px 0px #000000;
+}
+
+.modal-overlay.open .modal-content {
+    transform: translateY(0);
+}
+
+.modal-close {
+    position: absolute;
+    top: 1rem;
+    right: 1.5rem;
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: var(--text-muted);
+}
+
+.modal-header {
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--card-border);
+}
+
+.modal-body {
+    background: var(--bg-main);
+    border: 1px solid var(--line-color);
+    padding: 1rem;
+    border-radius: 8px;
+    color: var(--text-primary);
+    white-space: pre-wrap;
+}
+
+/* Premium Modal Extras */
+.modal-content-premium {
+    background: var(--bg-main);
+    border: var(--line-width) solid var(--line-color);
+    border-radius: var(--border-radius-lg);
+    box-shadow: var(--shadow-lg);
+    padding: 2.5rem;
+    width: 95%;
+    max-width: 40rem;
+    color: #000000;
+}
+
+.modal-header-premium {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding-bottom: 1.5rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid var(--card-border);
+    margin-bottom: 2rem;
+}
+
+.modal-title-premium {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.input-label-premium {
+    display: block;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 0.75rem;
+}
+
+.input-field-premium {
+    width: 100%;
+    background: var(--bg-secondary);
+    border: var(--line-width) solid var(--line-color);
+    color: var(--text-primary);
+    border-radius: var(--border-radius-md);
+    padding: 1rem;
+    font-size: 1rem;
+    transition: all 0.2s;
+}
+
+.input-field-premium:focus {
+    border-color: var(--primary-accent);
+    box-shadow: 4px 4px 0px rgba(0, 0, 0, 0.1);
+    outline: none;
+}
+
+.textarea-premium {
+    min-height: 320px;
+    line-height: 1.6;
+    resize: none;
+    font-family: inherit;
+}
+
+/* Toast */
+#toast {
+    visibility: hidden;
+    min-width: 250px;
+    background-color: var(--text-primary);
+    color: #fff;
+    text-align: center;
+    border-radius: 8px;
+    padding: 16px;
+    position: fixed;
+    z-index: 1000;
+    left: 50%;
+    bottom: 30px;
+    transform: translateX(-50%);
+}
+
+#toast.show {
+    visibility: visible;
+    animation: fadein 0.5s, fadeout 0.5s 2.5s;
+}
+
+@keyframes fadein {
+    from {
+        bottom: 0;
+        opacity: 0;
+    }
+
+    to {
+        bottom: 30px;
+        opacity: 1;
+    }
+}
+
+@keyframes fadeout {
+    from {
+        bottom: 30px;
+        opacity: 1;
+    }
+
+    to {
+        bottom: 0;
+        opacity: 0;
+    }
+}

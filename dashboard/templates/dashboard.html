@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="{{ current_theme }}">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title data-i18n="admin_title">{{ all_messages['ko']['dashboard']['admin_title'] }}</title>
+    <link rel="stylesheet" href="{{ url_for('dashboard.static', filename='vendor/css/inter.css') }}">
+    <link rel="stylesheet" href="{{ url_for('dashboard.static', filename='vendor/css/fontawesome.all.min.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/themes.css') }}">
+    <link rel="stylesheet" href="{{ url_for('dashboard.static', filename='css/dashboard.css') }}">
+    <script src="{{ url_for('dashboard.static', filename='vendor/js/chart.js') }}"></script>
+</head>
+
+<body>
+    <div class="dashboard-container">
+        <aside class="sidebar collapsed">
+            <div class="logo">
+                <div style="display:flex; align-items:center; gap:0.75rem; overflow:hidden;">
+                    <i class="fas fa-robot" style="font-size: 1.5rem;"></i>
+                    <span data-i18n="admin_title"
+                        style="white-space: pre-line; font-size: 1.5rem; line-height: 1.2; font-weight: 700;">{{
+                        all_messages['ko']['dashboard']['admin_title'] }}</span>
+                </div>
+                <i class="fas fa-chevron-left" id="sidebarToggle"
+                    style="cursor: pointer; margin-left: auto; transition: transform 0.3s; color: var(--text-secondary);"></i>
+            </div>
+            <nav class="nav-menu" style="flex: 1;">
+                {% if current_user %}
+                <div class="user-profile"
+                    style="display:flex; align-items:center; gap:0.75rem; padding: 0.75rem; color:var(--text-secondary); border-bottom:1px solid var(--border-color); margin-bottom:0.5rem;">
+                    <i class="fas fa-user-circle" style="font-size:1.2rem;"></i>
+                    <span
+                        style="font-size:0.9rem; font-weight:600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{
+                        current_user.id }}</span>
+                </div>
+                {% endif %}
+
+                <a href="/"><i class="fas fa-home"></i> <span data-i18n="nav_main">{{
+                        all_messages['ko']['dashboard']['nav_main'] }}</span></a>
+
+                <a href="{{ url_for('dashboard.index') }}" class="active"><i class="fas fa-chart-line"></i>
+                    <span data-i18n="nav_dashboard">{{ all_messages['ko']['dashboard']['nav_dashboard'] }}</span></a>
+
+                <!-- System Management Accordion -->
+                <div class="nav-group">
+                    <button class="accordion-btn" onclick="toggleAccordion(this)">
+                        <span><i class="fas fa-cogs"></i> <span data-i18n="nav_system">{{
+                                all_messages['ko']['dashboard']['nav_system'] }}</span></span>
+                        <i class="fas fa-chevron-right"></i>
+                    </button>
+                    <div class="accordion-content">
+                        <a href="{{ url_for('system.users_page') }}">
+                            <i class="fas fa-users"></i>
+                            <span data-i18n="nav_users">{{ all_messages['ko']['dashboard']['nav_users'] }}</span>
+                        </a>
+                        <a href="/system/templates">
+                            <i class="fas fa-file-alt"></i>
+                            <span data-i18n="nav_templates">{{ all_messages['ko']['dashboard']['nav_templates']
+                                }}</span>
+                        </a>
+                        <!-- <a href="#" data-i18n="nav_groups">{{ all_messages['ko']['dashboard']['nav_groups'] }}</a> -->
+                        <!-- <a href="#" data-i18n="nav_menus">{{ all_messages['ko']['dashboard']['nav_menus'] }}</a> -->
+                    </div>
+                </div>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <header class="top-bar" style="justify-content: flex-end;">
+                <!-- Date and Language selector removed as per user request -->
+            </header>
+
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon confident"><i class="fas fa-layer-group"></i></div>
+                    <div class="stat-info">
+                        <h3 data-i18n="stat_total_templates">{{ all_messages['ko']['dashboard']['stat_total_templates']
+                            }}</h3>
+                        <p id="totalTemplates">Loading...</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon combined"><i class="fas fa-comments"></i></div>
+                    <div class="stat-info">
+                        <h3 data-i18n="stat_total">{{ all_messages['ko']['dashboard']['stat_total'] }}</h3>
+                        <p id="totalQueries">Loading...</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon feedback"><i class="fas fa-comment-dots"></i></div>
+                    <div class="stat-info">
+                        <h3 data-i18n="stat_feedback">{{ all_messages['ko']['dashboard']['stat_feedback'] }}</h3>
+                        <p id="feedbackRate">Loading...</p>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="charts-container" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem;">
+                <div class="chart-card" style="min-width: 0;">
+                    <h3 data-i18n="chart_template">{{ all_messages['ko']['dashboard']['chart_template'] }}</h3>
+                    <div style="position: relative; height: 350px; width: 100%; display:flex; justify-content:center;">
+                        <canvas id="templateChart"></canvas>
+                    </div>
+                </div>
+                <div class="chart-card" style="min-width: 0; grid-column: span 2;">
+                    <h3 data-i18n="chart_trend">{{ all_messages['ko']['dashboard']['chart_trend'] }}</h3>
+                    <div style="position: relative; height: 350px; width: 100%;">
+                        <canvas id="trendChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- User Analytics Section moved below -->
+            <div class="charts-container" style="margin-top:2rem;">
+                <div class="chart-card large">
+                    <h3><i class="fas fa-users"></i> <span data-i18n="chart_user_activity">{{
+                            all_messages['ko']['dashboard']['chart_user_activity'] }}</span>
+                    </h3>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+                        <div>
+                            <h4 data-i18n="chart_kpi" style="margin-bottom: 1rem; color: #64748b; font-size: 0.95rem;">
+                                {{ all_messages['ko']['dashboard']['chart_kpi'] }}
+                            </h4>
+                            <div style="position: relative; height: 300px; width: 100%;">
+                                <canvas id="userActivityChart"></canvas>
+                            </div>
+                        </div>
+                        <div>
+                            <h4 data-i18n="chart_relation"
+                                style="margin-bottom: 1rem; color: #64748b; font-size: 0.95rem;">{{
+                                all_messages['ko']['dashboard']['chart_relation'] }}</h4>
+                            <div style="position: relative; height: 300px; width: 100%;">
+                                <canvas id="userTemplateChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="logs-container" style="margin-top: 2rem;">
+                <div class="chart-card">
+                    <div
+                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                        <h3 data-i18n="logs_title">{{ all_messages['ko']['dashboard']['logs_title'] }}</h3>
+
+                    </div>
+
+                    <!-- Search Filter Area -->
+                    <div class="filters-container"
+                        style="background: transparent; padding: 1rem 0; margin-bottom: 1rem; display:flex; flex-wrap:wrap; gap:1rem; align-items:flex-end;">
+                        <!-- Date Start -->
+                        <div class="filter-item">
+                            <label
+                                style="display:block; font-size:0.8rem; font-weight:600; color:#64748b; margin-bottom:0.25rem;">Start
+                                Date</label>
+                            <input type="date" id="filterStartDate"
+                                style="padding:0.4rem; border:1px solid #cbd5e1; border-radius:4px; font-family:inherit;">
+                        </div>
+                        <!-- Date End -->
+                        <div class="filter-item">
+                            <label
+                                style="display:block; font-size:0.8rem; font-weight:600; color:#64748b; margin-bottom:0.25rem;">End
+                                Date</label>
+                            <input type="date" id="filterEndDate"
+                                style="padding:0.4rem; border:1px solid #cbd5e1; border-radius:4px; font-family:inherit;">
+                        </div>
+                        <!-- Predicted ID -->
+                        <div class="filter-item">
+                            <label
+                                style="display:block; font-size:0.8rem; font-weight:600; color:#64748b; margin-bottom:0.25rem;"
+                                data-i18n="col_predicted">Predicted ID</label>
+                            <select id="filterPredictedId"
+                                style="padding:0.45rem; border:1px solid #cbd5e1; border-radius:4px; min-width:100px; font-family:inherit;">
+                                <option value="">All</option>
+                            </select>
+                        </div>
+                        <!-- User ID -->
+                        <div class="filter-item">
+                            <label
+                                style="display:block; font-size:0.8rem; font-weight:600; color:#64748b; margin-bottom:0.25rem;"
+                                data-i18n="col_user_id">User ID</label>
+                            <select id="filterUserId"
+                                style="padding:0.45rem; border:1px solid #cbd5e1; border-radius:4px; min-width:100px; font-family:inherit;">
+                                <option value="">All</option>
+                            </select>
+                        </div>
+                        <!-- Feedback Toggle -->
+                        <div class="filter-item">
+                            <label
+                                style="display:block; font-size:0.8rem; font-weight:600; color:#64748b; margin-bottom:0.25rem;"
+                                data-i18n="col_feedback">Feedback</label>
+                            <div style="display:flex; border:1px solid #cbd5e1; border-radius:4px; overflow:hidden;">
+                                <button onclick="setFeedbackFilter('all')" class="feedback-toggle active" id="btn_all"
+                                    style="padding:0.4rem 0.8rem; border:none; border-right:1px solid var(--border-color); background:var(--primary-accent); color:white; cursor:pointer; font-size:0.85rem; font-family:inherit;">All</button>
+                                <button onclick="setFeedbackFilter('feedback')" class="feedback-toggle"
+                                    id="btn_feedback"
+                                    style="padding:0.4rem 0.8rem; border:none; border-right:1px solid var(--border-color); background:var(--bg-secondary); color:var(--text-secondary); cursor:pointer; font-size:0.85rem; font-family:inherit;">Feedback</button>
+                                <button onclick="setFeedbackFilter('none')" class="feedback-toggle" id="btn_none"
+                                    style="padding:0.4rem 0.8rem; border:none; background:var(--bg-secondary); color:var(--text-secondary); cursor:pointer; font-size:0.85rem; font-family:inherit;">None</button>
+                            </div>
+                            <input type="hidden" id="filterFeedback" value="all">
+                        </div>
+                        <!-- Query Content -->
+                        <div class="filter-item" style="flex-grow: 1;">
+                            <label
+                                style="display:block; font-size:0.8rem; font-weight:600; color:#64748b; margin-bottom:0.25rem;"
+                                data-i18n="col_query">Query</label>
+                            <input type="text" id="filterQuery" maxlength="50" placeholder="Search..."
+                                style="padding:0.4rem; border:1px solid #cbd5e1; border-radius:4px; width:100%; font-family:inherit;">
+                        </div>
+
+                        <!-- Search Button -->
+                        <div class="filter-item">
+                            <button onclick="searchLogs()"
+                                style="padding:0.45rem 1rem; background:var(--primary-accent); color:white; border:none; border-radius:4px; cursor:pointer; font-weight:600; font-family:inherit;">
+                                <i class="fas fa-search"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <table class="logs-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 60px;">ID</th>
+                                <th data-i18n="col_time" style="width: 200px;">{{
+                                    all_messages['ko']['dashboard']['col_time'] }}</th>
+                                <th data-i18n="col_query" style="width: auto; min-width: 200px;">{{
+                                    all_messages['ko']['dashboard']['col_query'] }}</th>
+                                <th data-i18n="col_predicted" style="width: 250px;">{{
+                                    all_messages['ko']['dashboard']['col_predicted'] }}
+                                </th>
+                                <th data-i18n="col_user_id" style="width: 100px;">{{
+                                    all_messages['ko']['dashboard']['col_user_id'] }}
+                                </th>
+                                <th data-i18n="col_feedback" style="width: 100px;">{{
+                                    all_messages['ko']['dashboard']['col_feedback'] }}
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody id="logsTableBody">
+                            <tr>
+                                <td colspan="6" style="text-align:center;" data-i18n="msg_loading">{{
+                                    all_messages['ko']['dashboard']['msg_loading'] }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <!-- Pagination & Rows Footer -->
+                    <div
+                        style="display:flex; justify-content:space-between; align-items:center; padding-top:1rem; border-top:1px solid #e2e8f0; margin-top:1rem;">
+                        <div style="flex:1;"></div>
+
+                        <div class="pagination-controls"
+                            style="flex:auto; display:flex; justify-content:center; gap:0.5rem; align-items:center;">
+                            <button id="prevBtn" onclick="changePage(-1)" disabled
+                                style="padding:0.4rem 0.8rem; border:1px solid var(--border-color); background:var(--bg-card); border-radius:4px; cursor:pointer; color:var(--text-primary);"><i
+                                    class="fas fa-chevron-left"></i></button>
+                            <span id="pageInfo" style="font-weight:600; color:#475569;">Page 1 of 1</span>
+                            <button id="nextBtn" onclick="changePage(1)" disabled
+                                style="padding:0.4rem 0.8rem; border:1px solid var(--border-color); background:var(--bg-card); border-radius:4px; cursor:pointer; color:var(--text-primary);"><i
+                                    class="fas fa-chevron-right"></i></button>
+                        </div>
+
+                        <div style="flex:1; display:flex; justify-content:flex-end;">
+                            <select id="pageSizeSelect" onchange="changePageSize(this.value)"
+                                style="padding:0.4rem; border:1px solid #cbd5e1; border-radius:4px; font-family:inherit; color:#475569; font-size:0.85rem; cursor:pointer;">
+                                <option value="10" selected>10 Rows</option>
+                                <option value="20">20 Rows</option>
+                                <option value="50">50 Rows</option>
+                                <option value="100">100 Rows</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+    </div>
+    </main>
+    </div>
+    <!-- Manual Feedback Modal -->
+    <div id="manualFeedbackModal" class="modal" style="display: none;">
+        <div class="modal-content" style="max-width: 600px;">
+            <h3 data-i18n="modal_feedback_title" style="margin-bottom: 1.5rem;">{{
+                all_messages['ko']['feedback']['modal_feedback_title'] }}</h3>
+
+            <label style="display:block; margin-bottom:0.5rem; font-weight:600;" data-i18n="label_feedback_cat">{{
+                all_messages['ko']['feedback']['label_feedback_cat'] }}</label>
+            <select id="manualTemplateSelect" class="input-field"
+                style="width:100%; padding:0.8rem; margin-bottom: 1rem; border:1px solid #e2e8f0; border-radius:8px;">
+                <option value="">Select Category...</option>
+            </select>
+
+            <label style="display:block; margin-bottom:0.5rem; font-weight:600;">Template Content</label>
+            <div id="templateContentPreview"
+                style="padding: 1rem; border: 1px solid #e2e8f0; border-radius: 8px; background: #f8fafc; color: #475569; margin-bottom: 1rem; min-height: 60px; white-space: pre-wrap; font-size: 0.9rem;">
+            </div>
+
+            <label style="display:block; margin-bottom:0.5rem; font-weight:600;" data-i18n="label_answer">{{
+                all_messages['ko']['feedback']['label_answer'] }}</label>
+            <textarea id="manualAnswerInput" class="input-field" rows="6"
+                style="width:100%; padding:0.8rem; margin-bottom: 1.5rem; border:1px solid #e2e8f0; border-radius:8px;"></textarea>
+
+            <div style="display: flex; justify-content: flex-end; gap: 1rem;">
+                <button onclick="closeManualModal()"
+                    style="padding: 0.8rem 1.5rem; border: none; background: var(--secondary-accent); color: white; border-radius: 6px; cursor: pointer;">Cancel</button>
+                <button onclick="submitManualFeedback()"
+                    style="padding: 0.8rem 1.5rem; border: none; background: var(--primary-accent); color: white; border-radius: 6px; cursor: pointer;">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        window.dashboardConfig = {
+            messages: {{ all_messages | tojson | safe }},
+        currentUser: "{{ current_user.id if current_user else '' }}"
+        };
+    </script>
+    <script src="{{ url_for('dashboard.static', filename='js/dashboard.js') }}"></script>
+    <script>
+
+    </script>
+</body>
+
+</html>

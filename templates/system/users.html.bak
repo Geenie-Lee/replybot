@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System Management - User</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="/dashboard/static/vendor/css/inter.css">
+    <link rel="stylesheet" href="/dashboard/static/vendor/css/fontawesome.all.min.css">
+    <link rel="stylesheet" href="/static/css/themes.css">
+    <link rel="stylesheet" href="/dashboard/static/css/dashboard.css">
+    <style>
+        /* Override Styles */
+        body {}
+
+        .layout-container {
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+            height: calc(100vh - 80px);
+            overflow: hidden;
+            position: relative;
+        }
+
+        .filter-area {
+            flex: 0 0 auto;
+            margin: 1rem;
+            margin-bottom: 0.5rem;
+        }
+
+        /* Resizable Layout */
+        .grid-area {
+            flex: 0 0 50%;
+            /* Initial Height */
+            background: var(--bg-card);
+            margin: 0 1rem;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+        }
+
+        .resize-handle {
+            height: 8px;
+            background: var(--bg-main);
+            cursor: row-resize;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 0 1rem;
+        }
+
+        .resize-handle:hover {
+            background: var(--primary-accent);
+        }
+
+        .resize-handle::after {
+            content: '';
+            width: 40px;
+            height: 4px;
+            background: #cbd5e1;
+            border-radius: 2px;
+        }
+
+        .tab-area {
+            flex: 1;
+            /* Takes remaining space */
+            background: var(--bg-card);
+            margin: 0 1rem 1rem 1rem;
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+        }
+
+        /* Compact Table */
+        .logs-table th,
+        .logs-table td {
+            padding: 0.5rem 0.75rem;
+            font-size: 0.85rem;
+        }
+
+        .logs-table th {
+            font-weight: 600;
+        }
+
+        /* Detail Form 2 Column Grid */
+        .detail-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem 2rem;
+            padding: 1rem;
+        }
+
+        .detail-row {
+            display: grid;
+            grid-template-columns: 100px 1fr;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .detail-label {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+        }
+
+        .detail-value {
+            padding: 0.35rem 0.5rem;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            background: var(--bg-secondary);
+            font-size: 0.85rem;
+            min-height: 30px;
+            display: flex;
+            align-items: center;
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.4);
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background-color: var(--card-bg);
+            padding: 1.5rem;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            width: 400px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .modal-header {
+            font-size: 1.1rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            color: var(--text-primary);
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 0.8rem;
+            font-weight: 600;
+            margin-bottom: 0.3rem;
+            color: var(--text-secondary);
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 0.5rem;
+            border: 1px solid #cbd5e1;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+        }
+
+        .btn-group {
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.5rem;
+            margin-top: 1.5rem;
+        }
+
+        .btn {
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            border: none;
+        }
+
+        .btn-cancel {
+            background: var(--bg-secondary);
+            color: var(--text-secondary);
+            border: 1px solid var(--border-color);
+        }
+
+        .btn-submit {
+            background: var(--primary-accent);
+            color: white;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="dashboard-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="logo">
+                <div style="display:flex; align-items:center; gap:0.75rem;">
+                    <i class="fas fa-robot" style="font-size: 1.5rem;"></i>
+                    <span style="font-weight: 700;">ReplyBot<br>Admin</span>
+                </div>
+            </div>
+            <nav class="nav-menu">
+                <a href="/dashboard"><i class="fas fa-chart-line"></i> <span>Dashboard</span></a>
+                <a href="/"><i class="fas fa-home"></i> <span>Main Site</span></a>
+
+                <!-- System Management Accordion -->
+                <div class="nav-group">
+                    <button class="accordion-btn active" onclick="toggleAccordion(this)">
+                        <span><i class="fas fa-cogs"></i> System Management</span>
+                        <i class="fas fa-chevron-down"></i>
+                    </button>
+                    <div class="accordion-content open">
+                        <a href="/system/users" class="active">User Management</a>
+                        <a href="#">Authority Groups (TODO)</a>
+                        <a href="#">Menu Management (TODO)</a>
+                    </div>
+                </div>
+            </nav>
+        </aside>
+
+        <main class="main-content" style="padding:0; overflow:hidden;">
+            <header class="top-bar"
+                style="justify-content: space-between; padding: 1rem 1.5rem; margin-bottom:0; background:var(--bg-main); border-bottom:1px solid var(--border-color);">
+                <div style="display:flex; align-items:center; gap:1rem;">
+                    <h2 style="font-size:1.2rem; font-weight:700;">User Management</h2>
+                    <button onclick="openCreateModal()" class="btn btn-submit"
+                        style="font-size:0.8rem; padding: 0.3rem 0.8rem;">
+                        <i class="fas fa-plus"></i> New User
+                    </button>
+                </div>
+                <div style="display: flex; align-items: center; gap: 1rem;">
+                    <button onclick="openEditModal()" id="btnEdit" class="btn btn-cancel"
+                        style="font-size:0.8rem; padding: 0.3rem 0.8rem;" disabled>
+                        <i class="fas fa-edit"></i> Edit User
+                    </button>
+                    <div class="date-display" id="currentDate"></div>
+                </div>
+            </header>
+
+            <div class="layout-container" id="layoutContainer">
+                <!-- 1. Filter Area -->
+                <div class="card filter-area"
+                    style="background: var(--bg-card); padding: 0.8rem; border:1px solid var(--border-color); border-radius:6px;">
+                    <div style="display:flex; gap: 1rem; align-items: center;">
+                        <div style="display:flex; align-items:center; gap:0.5rem;">
+                            <label style="font-size:0.85rem; font-weight:600;">Category</label>
+                            <select id="searchCategory"
+                                style="padding:0.3rem; border:1px solid var(--border-color); border-radius:4px; font-size:0.85rem;">
+                                <option value="all">All</option>
+                                <option value="id">ID</option>
+                                <option value="name">Name</option>
+                                <option value="email">Email</option>
+                            </select>
+                        </div>
+                        <div style="flex:1; display:flex; align-items:center; gap:0.5rem;">
+                            <label style="font-size:0.85rem; font-weight:600;">Keyword</label>
+                            <input type="text" id="searchKeyword" onkeypress="if(event.key==='Enter') loadUsers(1)"
+                                placeholder="Search..."
+                                style="flex:1; padding:0.3rem; border:1px solid var(--border-color); border-radius:4px; font-size:0.85rem;">
+                        </div>
+                        <button onclick="loadUsers(1)" class="btn btn-submit" style="padding:0.35rem 1rem;">
+                            <i class="fas fa-search"></i> Search
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 2. Grid Area -->
+                <div class="grid-area" id="gridArea">
+                    <div style="overflow-y: auto; flex:1;">
+                        <table class="logs-table" style="width:100%;">
+                            <thead style="position:sticky; top:0; background:var(--bg-card); z-index:10;">
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Name</th>
+                                    <th>Email</th>
+                                    <th>Created At</th>
+                                    <th>Last Login</th>
+                                    <th style="width:80px;">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="usersTableBody">
+                                <!-- Data -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <!-- Pagination -->
+                    <div class="pagination-controls"
+                        style="padding: 0.4rem; justify-content: center; border-top: 1px solid var(--border-color); min-height:40px;">
+                        <button id="uPrev" onclick="changeUserPage(-1)" disabled
+                            style="width:24px; height:24px; font-size:0.7rem;">&lt;</button>
+                        <span id="uPageInfo" style="margin: 0 1rem; font-size:0.8rem;">1 / 1</span>
+                        <button id="uNext" onclick="changeUserPage(1)" disabled
+                            style="width:24px; height:24px; font-size:0.7rem;">&gt;</button>
+                    </div>
+                </div>
+
+                <!-- Resizer -->
+                <div class="resize-handle" id="resizer"></div>
+
+                <!-- 3. Tab Area -->
+                <div class="tab-area" id="tabArea">
+                    <div class="tabs-header" style="margin-bottom:0.5rem;">
+                        <button class="tab-btn active" onclick="switchTab('detail')">User Details</button>
+                        <button class="tab-btn" onclick="switchTab('logs')">Query Logs</button>
+                    </div>
+
+                    <div id="tab-detail" class="tab-content-panel active" style="overflow-y:auto;">
+                        <div id="userDetailContent">
+                            <p
+                                style="text-align:center; color: var(--text-secondary); margin-top:2rem; font-size:0.9rem;">
+                                Select a user from the list to view details.</p>
+                        </div>
+                    </div>
+
+                    <div id="tab-logs" class="tab-content-panel"
+                        style="display:none; flex-direction:column; height:100%;">
+                        <div style="flex:1; overflow-y:auto;">
+                            <table class="logs-table">
+                                <thead>
+                                    <tr>
+                                        <th style="width:150px;">Time</th>
+                                        <th>Query</th>
+                                        <th style="width:120px;">Predicted ID</th>
+                                        <th style="width:80px;">Conf.</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="userLogsBody">
+                                    <tr>
+                                        <td colspan="4" style="text-align:center;">Select a user to view logs.</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="pagination-controls"
+                            style="padding: 0.4rem; justify-content: center; margin-top: 0.5rem; border-top:1px solid var(--border-color);">
+                            <button id="lPrev" onclick="changeLogPage(-1)" disabled
+                                style="width:24px; height:24px; font-size:0.7rem;">&lt;</button>
+                            <span id="lPageInfo" style="margin: 0 1rem; font-size:0.8rem;">1 / 1</span>
+                            <button id="lNext" onclick="changeLogPage(1)" disabled
+                                style="width:24px; height:24px; font-size:0.7rem;">&gt;</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modals -->
+    <!-- Create User Modal -->
+    <div id="createUserModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">Create New User</div>
+            <form onsubmit="createUser(event)">
+                <div class="form-group">
+                    <label class="form-label">User ID *</label>
+                    <input type="text" id="new_id" class="form-input" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Username *</label>
+                    <input type="text" id="new_name" class="form-input" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Email *</label>
+                    <input type="email" id="new_email" class="form-input" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Password *</label>
+                    <input type="password" id="new_password" class="form-input" required>
+                </div>
+                <div class="btn-group">
+                    <button type="button" class="btn btn-cancel" onclick="closeModal('createUserModal')">Cancel</button>
+                    <button type="submit" class="btn btn-submit">Create</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Edit User Modal -->
+    <div id="editUserModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">Edit User</div>
+            <form onsubmit="updateUser(event)">
+                <input type="hidden" id="edit_id_hidden">
+                <div class="form-group">
+                    <label class="form-label">User ID</label>
+                    <input type="text" id="edit_id" class="form-input" disabled
+                        style="background:#f1f5f9; color:#64748b;">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Username</label>
+                    <input type="text" id="edit_name" class="form-input">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Email</label>
+                    <input type="email" id="edit_email" class="form-input">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">New Password (Optional)</label>
+                    <input type="password" id="edit_password" class="form-input"
+                        placeholder="Leave blank to keep current">
+                </div>
+                <div class="form-group" style="display:flex; align-items:center; gap:0.5rem; margin-top:1rem;">
+                    <input type="checkbox" id="edit_unlock">
+                    <label for="edit_unlock" style="font-size:0.9rem; cursor:pointer;">Account Locked</label>
+                </div>
+                <div class="btn-group">
+                    <button type="button" class="btn btn-cancel" onclick="closeModal('editUserModal')">Cancel</button>
+                    <button type="submit" class="btn btn-submit">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Script -->
+    <script>
+        let currentPage = 1;
+        let selectedUserId = null;
+        let currentLogPage = 1;
+        let selectedUserObj = null; // Store full object for edit
+
+        // Sidebar Accordion Logic matching dashboard.js
+        function toggleAccordion(btn) {
+            const content = btn.nextElementSibling;
+            if (content.style.display === 'block' || content.classList.contains('open')) {
+                content.style.display = 'none';
+                content.classList.remove('open');
+                btn.classList.remove('active');
+                if (btn.querySelector('.fa-chevron-down')) {
+                    btn.querySelector('.fa-chevron-down').classList.replace('fa-chevron-down', 'fa-chevron-right');
+                }
+            } else {
+                content.style.display = 'block';
+                content.classList.add('open');
+                btn.classList.add('active');
+                if (btn.querySelector('.fa-chevron-right')) {
+                    btn.querySelector('.fa-chevron-right').classList.replace('fa-chevron-right', 'fa-chevron-down');
+                }
+            }
+        }
+
+        // --- Layout Resizing ---
+        const resizer = document.getElementById('resizer');
+        const gridArea = document.getElementById('gridArea');
+        const tabArea = document.getElementById('tabArea');
+        let isResizing = false;
+
+        resizer.addEventListener('mousedown', (e) => {
+            isResizing = true;
+            document.body.style.cursor = 'row-resize';
+            document.body.style.userSelect = 'none';
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (!isResizing) return;
+            const containerHeight = document.getElementById('layoutContainer').clientHeight;
+            const offsetTop = document.getElementById('layoutContainer').getBoundingClientRect().top;
+
+            // Calculate new height for grid area (Top)
+            // e.clientY is relative to viewport
+            let newGridHeight = e.clientY - offsetTop - 20; // 20 padding/margin approx
+
+            // Constraints
+            if (newGridHeight < 150) newGridHeight = 150;
+            if (newGridHeight > containerHeight - 200) newGridHeight = containerHeight - 200;
+
+            gridArea.style.flex = '0 0 auto';
+            gridArea.style.height = newGridHeight + 'px';
+        });
+
+        document.addEventListener('mouseup', () => {
+            isResizing = false;
+            document.body.style.cursor = '';
+            document.body.style.userSelect = '';
+        });
+
+        // --- Data Loading ---
+        async function loadUsers(page) {
+            currentPage = page;
+            const cat = document.getElementById('searchCategory').value;
+            const key = document.getElementById('searchKeyword').value;
+
+            try {
+                // Per Page 10 requested
+                const res = await fetch(`/system/api/users?page=${page}&per_page=10&category=${cat}&keyword=${key}`);
+                const data = await res.json();
+
+                const tbody = document.getElementById('usersTableBody');
+                tbody.innerHTML = '';
+
+                if (data.data && data.data.length > 0) {
+                    data.data.forEach(u => {
+                        const tr = document.createElement('tr');
+                        tr.style.cursor = 'pointer';
+                        tr.onclick = () => selectUser(u.id);
+                        if (selectedUserId === u.id) tr.style.background = 'rgba(59, 130, 246, 0.1)';
+
+                        tr.innerHTML = `
+                            <td>${u.id}</td>
+                            <td>${u.username}</td>
+                            <td>${u.email}</td>
+                            <td>${new Date(u.created_at).toLocaleDateString()}</td>
+                            <td>${u.last_login_at ? new Date(u.last_login_at).toLocaleString() : '-'}</td>
+                            <td><span style="padding:2px 6px; border-radius:4px; font-size:0.75rem; background:${u.is_locked ? '#fee2e2' : '#dcfce7'}; color:${u.is_locked ? '#991b1b' : '#166534'}">${u.is_locked ? 'Locked' : 'Active'}</span></td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+                } else {
+                    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">No users found.</td></tr>';
+                }
+
+                // Pagination
+                const totalPages = Math.ceil(data.total / 10);
+                document.getElementById('uPageInfo').innerText = `${currentPage} / ${totalPages || 1}`;
+                document.getElementById('uPrev').disabled = currentPage <= 1;
+                document.getElementById('uNext').disabled = currentPage >= totalPages;
+
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        function changeUserPage(delta) {
+            loadUsers(currentPage + delta);
+        }
+
+        async function selectUser(userId) {
+            selectedUserId = userId;
+            // Highlight row logic omitted for brevity, usually simple enough refetch or class toggle
+
+            // Enable Edit
+            document.getElementById('btnEdit').disabled = false;
+            document.getElementById('btnEdit').classList.replace('btn-cancel', 'btn-submit');
+
+            // Fetch Detail
+            try {
+                const res = await fetch(`/system/api/users/${userId}`);
+                const u = await res.json();
+                selectedUserObj = u;
+
+                if (u.error) {
+                    alert(u.error); return;
+                }
+
+                const html = `
+                    <div class="detail-grid">
+                        <div class="detail-row"><span class="detail-label">User ID</span><span class="detail-value">${u.id}</span></div>
+                        <div class="detail-row"><span class="detail-label">Name</span><span class="detail-value">${u.username}</span></div>
+                        <div class="detail-row"><span class="detail-label">Email</span><span class="detail-value">${u.email}</span></div>
+                        <div class="detail-row"><span class="detail-label">Status</span><span class="detail-value">${u.is_locked ? 'Locked' : 'Active'}</span></div>
+                        <div class="detail-row"><span class="detail-label">Failed Logins</span><span class="detail-value">${u.failed_login_count}</span></div>
+                        <div class="detail-row"><span class="detail-label">Locked Until</span><span class="detail-value">${u.locked_until || '-'}</span></div>
+                        <div class="detail-row"><span class="detail-label">Created At</span><span class="detail-value">${new Date(u.created_at).toLocaleString()}</span></div>
+                        <div class="detail-row"><span class="detail-label">Last Login</span><span class="detail-value">${u.last_login_at ? new Date(u.last_login_at).toLocaleString() : '-'}</span></div>
+                    </div>
+                `;
+                document.getElementById('userDetailContent').innerHTML = html;
+
+                // Load Logs (Reset to page 1)
+                // If logs tab active, load logs
+                if (document.getElementById('tab-logs').style.display === 'flex') {
+                    loadUserLogs(1);
+                } else {
+                    currentLogPage = 1; // Reset so next tap loads page 1
+                }
+
+            } catch (e) { console.error(e); }
+        }
+
+        async function loadUserLogs(page) {
+            if (!selectedUserId) return;
+            currentLogPage = page;
+
+            // Ensure Tab 2 is updated correctly
+            try {
+                const res = await fetch(`/system/api/users/${selectedUserId}/logs?page=${page}&per_page=10`);
+                const data = await res.json();
+
+                const tbody = document.getElementById('userLogsBody');
+                tbody.innerHTML = '';
+
+                if (data.data && data.data.length > 0) {
+                    data.data.forEach(l => {
+                        tbody.innerHTML += `
+                            <tr>
+                                <td>${new Date(l.created_at).toLocaleString()}</td>
+                                <td style="max-width:300px; text-overflow:ellipsis; overflow:hidden; white-space:nowrap;" title="${l.query_text}">${l.query_text}</td>
+                                <td>${l.predicted_template_id}</td>
+                                <td>${(l.confidence_score * 100).toFixed(1)}%</td>
+                            </tr>
+                        `;
+                    });
+                } else {
+                    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">No logs found.</td></tr>';
+                }
+
+                const totalPages = Math.ceil(data.total / 10);
+                document.getElementById('lPageInfo').innerText = `${currentLogPage} / ${totalPages || 1}`;
+                document.getElementById('lPrev').disabled = currentLogPage <= 1;
+                document.getElementById('lNext').disabled = currentLogPage >= totalPages;
+
+            } catch (e) { console.error(e); }
+        }
+
+        function changeLogPage(delta) {
+            loadUserLogs(currentLogPage + delta);
+        }
+
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            // Hide all panels
+            document.getElementById('tab-detail').style.display = 'none';
+            document.getElementById('tab-logs').style.display = 'none';
+
+            if (tabName === 'detail') {
+                document.querySelector('button[onclick="switchTab(\'detail\')"]').classList.add('active');
+                document.getElementById('tab-detail').style.display = 'block';
+            } else {
+                document.querySelector('button[onclick="switchTab(\'logs\')"]').classList.add('active');
+                document.getElementById('tab-logs').style.display = 'flex'; // flex for correct layout
+                if (selectedUserId) loadUserLogs(currentLogPage);
+            }
+        }
+
+        // --- Modals ---
+        function openCreateModal() {
+            document.getElementById('createUserModal').style.display = 'flex';
+            document.getElementById('new_id').value = '';
+            document.getElementById('new_name').value = '';
+            document.getElementById('new_email').value = '';
+            document.getElementById('new_password').value = '';
+        }
+
+        function openEditModal() {
+            if (!selectedUserObj) return;
+            document.getElementById('editUserModal').style.display = 'flex';
+            document.getElementById('edit_id_hidden').value = selectedUserObj.id;
+            document.getElementById('edit_id').value = selectedUserObj.id;
+            document.getElementById('edit_name').value = selectedUserObj.username;
+            document.getElementById('edit_email').value = selectedUserObj.email;
+            document.getElementById('edit_password').value = '';
+            document.getElementById('edit_unlock').checked = selectedUserObj.is_locked;
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).style.display = 'none';
+        }
+
+        async function createUser(e) {
+            e.preventDefault();
+            const body = {
+                id: document.getElementById('new_id').value,
+                username: document.getElementById('new_name').value,
+                email: document.getElementById('new_email').value,
+                password: document.getElementById('new_password').value
+            };
+
+            try {
+                const res = await fetch('/system/api/users', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+                const data = await res.json();
+                if (data.success) {
+                    alert('User created successfully');
+                    closeModal('createUserModal');
+                    loadUsers(1);
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            } catch (e) { console.error(e); alert('Failed to create user'); }
+        }
+
+        async function updateUser(e) {
+            e.preventDefault();
+            const id = document.getElementById('edit_id_hidden').value;
+
+            const isLocked = document.getElementById('edit_unlock').checked;
+
+            const body = {
+                username: document.getElementById('edit_name').value,
+                email: document.getElementById('edit_email').value,
+                password: document.getElementById('edit_password').value || null,
+                is_locked: isLocked
+            };
+
+            try {
+                const res = await fetch(`/system/api/users/${id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+                const data = await res.json();
+                if (data.success) {
+                    alert('User updated successfully');
+                    closeModal('editUserModal');
+                    loadUsers(currentPage); // reload current page
+                    selectUser(id); // refresh details
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            } catch (e) { console.error(e); alert('Failed to update user'); }
+        }
+
+        window.onload = function () {
+            loadUsers(1);
+        }
+    </script>
+</body>
+
+</html>

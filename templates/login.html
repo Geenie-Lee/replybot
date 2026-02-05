@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="{{ current_theme }}">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
+    <title>ReplyBot</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='vendor/css/inter.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/reset.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/login.css') }}">
+</head>
+
+<body>
+    <div class="login-card">
+        <!-- Theme & Language -->
+        <select id="langSelect" onchange="changeLanguage(this.value)" class="lang-select">
+            <option value="ko" selected>KO</option>
+            <option value="en">EN</option>
+        </select>
+
+        <!-- Header -->
+        <div class="header-section">
+            <div class="logo-box">R</div>
+            <h2 data-i18n="login.login_title">{{ messages.login.login_title }}</h2>
+            <p class="subtitle" data-i18n="login.login_subtitle">{{ messages.login.login_subtitle }}</p>
+        </div>
+
+        <!-- Error Message -->
+        {% if error %}
+        <div class="alert alert-error">
+            <div style="margin-left: 0.75rem; font-size: 0.875rem;">{{ error }}</div>
+        </div>
+        {% endif %}
+
+        <!-- Success Message -->
+        {% if success %}
+        <div class="alert alert-success">
+            <div style="margin-left: 0.75rem; font-size: 0.875rem;">{{ success }}</div>
+        </div>
+        {% endif %}
+
+        <!-- Login Form -->
+        <form class="space-y-6" action="/login" method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+            <div class="form-group">
+                <label for="username" data-i18n="login.label_username">{{ messages.login.label_username }}</label>
+                <input id="username" name="username" type="text" required
+                    placeholder="{{ messages.login.placeholder_username }}"
+                    data-i18n-placeholder="login.placeholder_username">
+            </div>
+            <div class="form-group">
+                <label for="password" data-i18n="login.label_password">{{ messages.login.label_password }}</label>
+                <input id="password" name="password" type="password" required
+                    placeholder="{{ messages.login.placeholder_password }}"
+                    data-i18n-placeholder="login.placeholder_password">
+            </div>
+
+
+
+            <button type="submit" class="btn-primary" style="margin-top: 1.5rem;">
+                <svg class="btn-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd"
+                        d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z"
+                        clip-rule="evenodd" />
+                </svg>
+                <span data-i18n="login.btn_signin">{{ messages.login.btn_signin }}</span>
+            </button>
+        </form>
+
+        <!-- Security Badge -->
+
+        <!-- Sign Up Link -->
+        <div style="margin-top: 2rem; text-align: center; font-size: 0.875rem; color: #64748b;">
+            <span data-i18n="login.msg_no_account">{{ messages.login.msg_no_account }}</span>
+            <button type="button" onclick="toggleRegisterModal()"
+                style="color: #2563eb; font-weight: 600; cursor: pointer; background: none; border: none; padding: 0; margin-left: 0.25rem;"
+                data-i18n="login.btn_signup_link">{{ messages.login.btn_signup_link }}</button>
+        </div>
+    </div>
+
+    <!-- Set Initial Password Modal -->
+    <div id="setPwModal" class="modal {% if not show_setup_password %}hidden{% endif %}">
+        <div class="modal-content">
+            <span class="close-modal"
+                onclick="document.getElementById('setPwModal').classList.add('hidden')">&times;</span>
+            <h3 class="modal-title">비밀번호 설정</h3>
+            <p class="modal-desc">초기 비밀번호를 설정해주세요.</p>
+
+            <form action="/set_initial_password" method="POST" onsubmit="return handleSetPassword(event)">
+                <div class="form-group">
+                    <label>사용자 ID</label>
+                    <input type="text" class="input-field" name="user_id"
+                        value="{{ setup_user.id if setup_user else '' }}" readonly
+                        style="background:#f1f5f9; cursor:not-allowed; opacity:0.8;">
+                </div>
+                <div class="form-group">
+                    <label>이름</label>
+                    <input type="text" class="input-field" value="{{ setup_user.username if setup_user else '' }}"
+                        readonly style="background:#f1f5f9; cursor:not-allowed; opacity:0.8;">
+                </div>
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="text" class="input-field" value="{{ setup_user.email if setup_user else '' }}" readonly
+                        style="background:#f1f5f9; cursor:not-allowed; opacity:0.8;">
+                </div>
+
+                <div class="form-group">
+                    <label>비밀번호</label>
+                    <input type="password" class="input-field" name="password" id="setPw" required>
+                </div>
+                <div class="form-group">
+                    <label>비밀번호 확인</label>
+                    <input type="password" class="input-field" id="setPwConfirm" required>
+                </div>
+
+                <button type="submit" class="btn-login" style="margin-top:1rem;">저장</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Registration Modal -->
+    <div id="registerModal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-icon-circle" style="background-color: rgba(30, 64, 175, 0.5);">
+                <svg class="h-6 w-6 text-blue-400" style="width:1.5rem; height:1.5rem;" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                </svg>
+            </div>
+            <h3 class="modal-title" data-i18n="login.register_title">사용자 등록</h3>
+            <p class="modal-desc" data-i18n="login.register_desc">새로운 관리자 계정을 생성합니다.</p>
+
+            <!-- Registration Error Display -->
+            <div id="registerError" class="alert alert-error"
+                style="{% if not register_error %}display:none;{% endif %} margin-bottom:1rem;">
+                <div style="margin-left: 0.75rem; font-size: 0.875rem;">{{ register_error }}</div>
+            </div>
+
+            <form action="/register" method="POST" onsubmit="return handleRegister(event)">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <div class="form-group">
+                    <label data-i18n="login.label_userid">사용자 ID</label>
+                    <input type="text" name="user_id" required data-i18n-placeholder="login.placeholder_userid"
+                        placeholder="사번 또는 ID">
+                </div>
+                <div class="form-group">
+                    <label data-i18n="login.label_name">이름</label>
+                    <input type="text" name="username" required data-i18n-placeholder="login.placeholder_username"
+                        placeholder="이름">
+                </div>
+                <div class="form-group">
+                    <label data-i18n="login.label_email">이메일</label>
+                    <input type="email" name="email" required data-i18n-placeholder="login.placeholder_email"
+                        placeholder="이메일 주소">
+                </div>
+                <div class="form-group">
+                    <label data-i18n="login.label_password">비밀번호</label>
+                    <input type="password" id="registerPassword" name="password" required
+                        data-i18n-placeholder="login.placeholder_password" placeholder="비밀번호 설정">
+                </div>
+                <div class="form-group">
+                    <label data-i18n="login.label_password_confirm">비밀번호 확인</label>
+                    <input type="password" id="registerConfirmPassword" name="confirm_password" required
+                        data-i18n-placeholder="login.placeholder_password_confirm" placeholder="비밀번호 확인">
+                </div>
+                <div class="modal-actions">
+                    <button type="submit" class="btn-primary" data-i18n="login.btn_signup_submit">등록하기</button>
+                    <button type="button" onclick="toggleRegisterModal()" class="btn-cancel"
+                        data-i18n="login.btn_cancel">취소</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+
+
+    <script>
+        const i18n = {{ i18n_messages | tojson }};
+    </script>
+    <script src="{{ url_for('static', filename='js/login.js') }}?v=2"></script>
+    <script>
+        window.onload = function () {
+            // Check stored lang or default to 'ko'
+            const storedLang = localStorage.getItem('replybot_lang') || 'ko';
+            const langSelect = document.getElementById('langSelect');
+            if (langSelect) langSelect.value = storedLang;
+            changeLanguage(storedLang);
+
+            // Flask Flash Message for Registration (Auto open if error/flag)
+            {% if show_register %}
+            toggleRegisterModal();
+            {% endif %}
+
+
+        };
+    </script>
+</body>
+
+</html>

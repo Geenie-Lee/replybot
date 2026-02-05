@@ -1,0 +1,19 @@
+[database]
+host = "127.0.0.1"
+user = "aidata"
+password = "nexus!234"
+database = "aidata"
+port = 3306
+
+[server]
+threshold = 0.35
+top_k = 3
+theme = "blueblackp"
+enable_duck_animation = false
+
+[files]
+model = "model/wavve_randomforest_model.pkl"
+templates = "model/wavve_reply_templates_132.json"
+
+[feedback]
+max_length = 1000

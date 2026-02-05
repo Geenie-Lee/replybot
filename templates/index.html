@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="{{ current_theme }}">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
+    <title data-i18n="common.page_title">{{ messages.common.page_title }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='vendor/css/noto-sans-kr.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='vendor/css/fontawesome.all.min.css') }}">
+    <script src="{{ url_for('static', filename='vendor/js/chart.js') }}"></script>
+
+    <!-- External CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/reset.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/layout.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/components.css') }}">
+
+    <style>
+        /* Duck Animation */
+        #duckContainer {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 9999;
+            overflow: hidden;
+            display: none;
+        }
+
+        .duck {
+            position: absolute;
+            width: 60px;
+            height: auto;
+            right: -100px;
+            /* Start off-screen right */
+            animation: flyLeft 10s linear forwards;
+            background-image: url("{{ url_for('static', filename='img/duck.png') }}");
+            background-size: contain;
+            background-repeat: no-repeat;
+        }
+
+        @keyframes flyLeft {
+            0% {
+                transform: translateX(0) translateY(0);
+                right: -100px;
+            }
+
+            100% {
+                transform: translateX(-120vw) translateY(var(--y-shift, 0px));
+                right: 100%;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <header class="header">
+            <div class="header-title-container fade-in-up">
+                <img src="{{ url_for('logo') }}" alt="Logo" class="header-logo">
+                <h1 data-i18n="common.header_title">{{ messages.common.header_title }}</h1>
+                <div class="lang-select-container"
+                    style="display:flex; flex-direction:column; align-items:flex-end; gap:5px;">
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        {% if current_user %}
+                        <span style="color:#6b7280; font-weight:600; font-size:0.9rem;"><i class="fas fa-user"
+                                style="margin-right: 5px;"></i> {{ current_user.user_id }}</span>
+                        {% endif %}
+                        <a href="/logout"
+                            style="display:flex; flex-direction:column; align-items:center; color:#6b7280; padding:0.25rem 0.5rem; transition:0.2s; text-decoration:none;"
+                            onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color='#6b7280'"
+                            title="Logout">
+                            <i class="fas fa-sign-out-alt" style="font-size:1.2rem;"></i>
+                            <span style="font-size:0.6rem; margin-top:2px; line-height:1;">logout</span>
+                        </a>
+                    </div>
+                    {% if current_user and current_user.user_id == 'admin' %}
+                    <a href="/dashboard"
+                        style="display:inline-block; width:100%; text-align:center; box-sizing:border-box; background: linear-gradient(90deg, #1e293b, #334155); color:white; padding:4px 0; border-radius:4px; font-size:0.8rem; text-decoration:none; font-weight:600; box-shadow:0 1px 2px rgba(0,0,0,0.1); transition: opacity 0.2s;"
+                        onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">
+                        대시보드
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </header>
+
+        <section class="content-card fade-in-up">
+            <div class="search-form">
+                <div class="input-group">
+                    <label for="queryInput" data-i18n="form.query_label">{{ messages.form.query_label }}</label>
+                    <textarea id="queryInput" rows="2" maxlength="300"
+                        placeholder="{{ messages.form.query_placeholder }}"
+                        data-i18n-placeholder="form.query_placeholder" oninput="checkQueryLength(this)"
+                        onkeypress="if(event.key==='Enter'){event.preventDefault(); findTemplate();}"></textarea>
+                    <div id="queryCharCount"
+                        style="text-align: right; font-size: 0.8rem; color: #94a3b8; margin-top: 0.25rem;">0 / 300</div>
+                </div>
+            </div>
+            <div style="text-align: center; margin-top: 1.5rem; margin-bottom: 1.5rem;">
+                <button onclick="findTemplate()" class="search-btn">
+                    <i class="fas fa-magic"></i> <span data-i18n="form.btn_generate">{{ messages.form.btn_generate
+                        }}</span>
+                </button>
+            </div>
+            <div id="searchResult"></div>
+        </section>
+
+        <section class="fade-in-up">
+            <h3 style="margin-bottom:1.5rem; color:var(--text-primary);"><i class="fas fa-list"></i> <span
+                    data-i18n="templates_list.title">{{ messages.templates_list.title }}</span> (<span
+                    id="totalTemplates">0</span>)</h3>
+            <div id="templatesContainer" class="templates-grid"></div>
+        </section>
+    </div>
+
+    <div id="toast">{{ messages.common.toast_copy_success }}</div>
+
+    <!-- Modal -->
+    <div id="modalOverlay" class="modal-overlay" onclick="UI.closeModal(event)">
+        <div class="modal-content">
+            <button class="modal-close" onclick="UI.closeModal(null)">&times;</button>
+            <div class="modal-header">
+                <div
+                    style="display: flex; justify-content: space-between; align-items: flex-start; margin-right: 1.5rem;">
+                    <div>
+                        <div class="modal-title" id="modalTitle">{{ messages.modal.title_default }}</div>
+                        <span id="modalCategory" class="template-tag"
+                            style="margin-top: 0.5rem; display: inline-block;">-</span>
+                    </div>
+                    <button class="copy-btn" onclick="UI.copyText('modalBody')"
+                        style="display: inline-flex; font-size: 0.85rem; padding: 0.6rem 1rem; border-radius: 8px; background: var(--bg-secondary); border: 1px solid var(--card-border); color: var(--text-secondary); transition: all 0.2s;">
+                        <i class="far fa-copy"></i> {{ messages.result.btn_copy_short }}
+                    </button>
+                </div>
+            </div>
+            <div class="modal-body" id="modalBody">...</div>
+        </div>
+    </div>
+
+    <!-- Feedback Modal -->
+    <div id="feedbackModalOverlay" class="modal-overlay" onclick="UI.closeFeedbackModal(event)">
+        <div class="modal-content-premium" onclick="event.stopPropagation()">
+            <div class="modal-header-premium">
+                <div class="modal-title-premium" data-i18n="feedback.modal_feedback_title">{{
+                    messages.feedback.modal_title }}</div>
+                <button class="modal-close" style="position:static; font-size:2rem; line-height:0.5; color:#94a3b8;"
+                    onclick="UI.closeFeedbackModal(null)">&times;</button>
+            </div>
+
+            <div style="display: grid; gap: 1.5rem;">
+                <div>
+                    <label class="input-label-premium" data-i18n="feedback.label_feedback_cat">{{
+                        messages.feedback.label_category }}</label>
+                    <select id="feedbackCategory" class="input-field-premium" onchange="UI.onCategoryChange(this)"
+                        style="appearance: auto; padding-right: 2rem;">
+                        <option value="">{{ messages.feedback.modal_placeholder_category }}</option>
+                    </select>
+                </div>
+
+
+                <div>
+                    <label class="input-label-premium" data-i18n="feedback.label_feedback_ans">{{
+                        messages.feedback.label_answer }}</label>
+                    <textarea id="feedbackInput" oninput="checkFeedbackLength(this)"
+                        class="input-field-premium textarea-premium"
+                        placeholder="{{ messages.feedback.modal_placeholder }}"
+                        data-i18n-placeholder="feedback.modal_placeholder"></textarea>
+                    <div style="text-align: right; margin-top: 0.5rem; font-size: 0.8rem; color: #64748b;">
+                        <span id="charCount">0</span> / <span id="maxCharCount">500</span>
+                    </div>
+                </div>
+            </div>
+
+            <div style="margin-top: 2rem; display:flex; justify-content:flex-end;">
+                <button class="search-btn" onclick="submitFeedback()" style="width: auto; padding: 0.75rem 2rem;"
+                    data-i18n="feedback.btn_submit">
+                    {{ messages.feedback.btn_submit }}
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Duck Container -->
+    <div id="duckContainer"></div>
+
+    <!-- Scripts -->
+    <script>
+        // Server-side variables injected
+        const MSG = {{ messages | tojson }};
+        const SERVER_CONFIG = {{ server_config | tojson }};
+        const i18n = {{ i18n_messages | tojson }};
+        var allTemplates = [];
+        var currentLogId = null;
+    </script>
+    <script src="{{ url_for('static', filename='js/api.js') }}?v=2"></script>
+    <script src="{{ url_for('static', filename='js/chart.js') }}?v=2"></script>
+    <script src="{{ url_for('static', filename='js/ui.js') }}?v=2"></script>
+    <script src="{{ url_for('static', filename='js/main.js') }}?v=3"></script>
+    <script>
+        // Idle Animation Logic
+        let idleTime = 0;
+        const idleLimit = 5; // 5 seconds
+        let isFlocking = false;
+
+        // Increment idle time counter every second
+        const idleInterval = setInterval(timerIncrement, 1000);
+
+        function timerIncrement() {
+            idleTime++;
+            const enableDuck = SERVER_CONFIG.server && SERVER_CONFIG.server.enable_duck_animation;
+            if (enableDuck && idleTime >= idleLimit && !isFlocking) {
+                spawnDuckFlock();
+            }
+        }
+
+        function resetTimer() {
+            idleTime = 0;
+        }
+
+        // Events to track activity
+        window.addEventListener('mousemove', resetTimer);
+        window.addEventListener('keypress', resetTimer);
+        window.addEventListener('click', resetTimer);
+        window.addEventListener('scroll', resetTimer);
+        window.addEventListener('touchstart', resetTimer);
+
+        function spawnDuckFlock() {
+            isFlocking = true;
+            const container = document.getElementById('duckContainer');
+            container.style.display = 'block';
+            container.innerHTML = ''; // Clear previous
+
+            const numberOfDucks = 10;
+
+            for (let i = 0; i < numberOfDucks; i++) {
+                const duck = document.createElement('div');
+                duck.className = 'duck';
+
+                // Randomize Start position (Y)
+                const topP = Math.random() * 80 + 10; // 10% to 90% height
+                duck.style.top = topP + '%';
+
+                // Randomize Size slightly
+                const size = 50 + Math.random() * 30;
+                duck.style.width = size + 'px';
+                duck.style.height = size + 'px';
+
+                // Randomize Speed (Duration)
+                const duration = 8 + Math.random() * 5; // 8-13s
+                duck.style.animationDuration = duration + 's';
+
+                // Randomize Delay
+                const delay = Math.random() * 2; // 0-2s delay
+                duck.style.animationDelay = delay + 's';
+
+                container.appendChild(duck);
+            }
+
+            // Cleanup after animation roughly finishes
+            setTimeout(() => {
+                container.style.display = 'none';
+                container.innerHTML = '';
+                isFlocking = false;
+                idleTime = 0; // Reset so it can happen again if still idle
+            }, 15000); // 13s max duration + 2s delay
+        }
+    </script>
+</body>
+
+</html>

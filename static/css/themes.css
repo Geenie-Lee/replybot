@@ -1,0 +1,122 @@
+/* Theme Definitions */
+
+/* Default (Mono) - Crayon Style */
+:root,
+[data-theme="mono"] {
+    --bg-main: #ffffff;
+    --bg-secondary: #f4f4f5;
+    --card-bg: #ffffff;
+    --card-border: #000000;
+    --text-primary: #000000;
+    --text-secondary: #000000;
+    --text-muted: #000000;
+    --primary-accent: #000000;
+    --primary-glow: transparent;
+    --secondary-accent: #000000;
+    --success-color: #000000;
+    --success-bg: #e5e5e5;
+    --danger-color: #000000;
+    --crown-color: #000000;
+
+    /* Crayon Geometry */
+    --border-radius-lg: 8px 24px 6px 14px / 14px 6px 20px 4px;
+    --border-radius-md: 4px 12px 3px 9px / 9px 3px 10px 4px;
+    --line-width: 3px;
+    --font-main: 'Comic Sans MS', 'Chalkboard SE', 'Marker Felt', sans-serif;
+
+    /* Hard Shadows for Crayon */
+    --shadow-color: #000000;
+    --shadow-md: 3px 3px 0px var(--shadow-color);
+    --shadow-lg: 6px 6px 0px var(--shadow-color);
+    --shadow-glow: none;
+
+    /* Line Color for borders */
+    --line-color: #000000;
+    --border-color: #000000;
+    /* Alias for compatibility */
+}
+
+/* Blue-Black-Purple (Dark Tech) */
+[data-theme="blueblackp"] {
+    --bg-main: #0f172a;
+    /* Slate 900 */
+    --bg-secondary: #1e293b;
+    /* Slate 800 */
+    --card-bg: #1e293b;
+    --card-border: #334155;
+    /* Slate 700 */
+    --text-primary: #f8fafc;
+    /* Slate 50 */
+    --text-secondary: #cbd5e1;
+    /* Slate 300 */
+    --text-muted: #94a3b8;
+    /* Slate 400 */
+    --primary-accent: #8b5cf6;
+    /* Violet 500 */
+    --primary-glow: rgba(139, 92, 246, 0.5);
+    --secondary-accent: #6366f1;
+    /* Indigo 500 */
+    --success-color: #34d399;
+    /* Emerald 400 */
+    --success-bg: rgba(52, 211, 153, 0.1);
+    --danger-color: #f87171;
+    /* Red 400 */
+    --crown-color: #eab308;
+
+    /* Tech Geometry */
+    --border-radius-lg: 12px;
+    --border-radius-md: 6px;
+    --line-width: 1px;
+    --font-main: 'Inter', system-ui, -apple-system, sans-serif;
+
+    /* Soft Shadows & Glows */
+    --shadow-color: rgba(0, 0, 0, 0.5);
+    --shadow-md: 0 4px 6px -1px var(--shadow-color);
+    --shadow-lg: 0 10px 15px -3px var(--shadow-color);
+    --shadow-glow: 0 0 20px rgba(139, 92, 246, 0.3);
+    /* Make lines more visible against dark bg */
+    --line-color: #475569;
+    --border-color: #475569;
+}
+
+/* White-Gray-Orange (Clean Light) */
+[data-theme="whitegrayo"] {
+    --bg-main: #f8fafc;
+    /* Slate 50 */
+    --bg-secondary: #ffffff;
+    --card-bg: #ffffff;
+    --card-border: #e2e8f0;
+    /* Slate 200 */
+    --text-primary: #334155;
+    /* Slate 700 */
+    --text-secondary: #64748b;
+    /* Slate 500 */
+    --text-muted: #94a3b8;
+    /* Slate 400 */
+    --primary-accent: #f97316;
+    /* Orange 500 */
+    --primary-glow: rgba(249, 115, 22, 0.3);
+    --secondary-accent: #fb923c;
+    /* Orange 400 */
+    --success-color: #10b981;
+    /* Emerald 500 */
+    --success-bg: #ecfdf5;
+    --danger-color: #ef4444;
+    /* Red 500 */
+    --crown-color: #eab308;
+
+    /* Clean Geometry */
+    --border-radius-lg: 16px;
+    --border-radius-md: 8px;
+    --line-width: 1px;
+    --font-main: 'Inter', system-ui, -apple-system, sans-serif;
+
+    /* Soft Shadows */
+    --shadow-color: rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 4px 6px -1px var(--shadow-color);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    --shadow-glow: 0 0 15px rgba(249, 115, 22, 0.1);
+
+    --line-color: #cbd5e1;
+    --border-color: #cbd5e1;
+}
