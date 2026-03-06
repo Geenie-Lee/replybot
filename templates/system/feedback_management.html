@@ -1,0 +1,873 @@
+<!DOCTYPE html>
+<html lang="{{ current_language|default('ko') }}" data-theme="{{ current_theme|default('mono') }}">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
+    <title>{{ messages.dashboard.nav_feedback }}</title>
+    <!-- Use dashboard layout links to ensure consistency -->
+    <link rel="stylesheet" href="{{ url_for('dashboard.static', filename='vendor/css/inter.css') }}">
+    <link rel="stylesheet" href="{{ url_for('dashboard.static', filename='vendor/css/fontawesome.all.min.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/themes.css') }}">
+    <!-- Load dashboard css for shared styles -->
+    <link rel="stylesheet" href="{{ url_for('dashboard.static', filename='css/dashboard.css') }}">
+    <style>
+        .layout-container {
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+            height: calc(100vh - 80px);
+            overflow: hidden;
+            position: relative;
+        }
+
+        .split-content {
+            display: flex;
+            flex-direction: row;
+            flex: 1;
+            overflow: hidden;
+            padding-bottom: 1rem;
+        }
+
+        .grid-area {
+            flex: 0 0 70%;
+            margin: 0 0 0 1rem;
+            background: var(--card-bg);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+        }
+
+        .resize-handle {
+            width: 8px;
+            height: auto;
+            background: var(--bg-main);
+            cursor: col-resize;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 0;
+        }
+
+        .resize-handle:hover {
+            background: var(--primary-accent);
+        }
+
+        .resize-handle::after {
+            content: '';
+            width: 4px;
+            height: 40px;
+            background: #cbd5e1;
+            border-radius: 2px;
+        }
+
+        .tab-area {
+            flex: 1;
+            margin: 0 1rem 0 0;
+            background: var(--card-bg);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+        }
+
+        .detail-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1rem;
+            padding: 1rem;
+        }
+
+        .detail-row {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .detail-label {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+        }
+
+        .detail-value {
+            padding: 0.6rem;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            background: var(--bg-secondary);
+            font-size: 0.9rem;
+            color: var(--text-primary);
+            white-space: pre-wrap;
+            min-height: 40px;
+        }
+
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 9999;
+            justify-content: center;
+            align-items: center;
+            backdrop-filter: blur(2px);
+        }
+
+        .modal-content {
+            background: var(--card-bg);
+            padding: 2rem;
+            border-radius: 8px;
+            width: 600px;
+            max-width: 95%;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            border: 1px solid var(--card-border);
+            max-height: 95vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            font-size: 1.25rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            color: var(--text-primary);
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .form-input,
+        .form-select {
+            width: 100%;
+            padding: 0.6rem;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            background: var(--bg-input);
+            color: var(--text-primary);
+            font-size: 0.95rem;
+        }
+
+        .form-textarea {
+            width: 100%;
+            padding: 0.6rem;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            background: var(--bg-input);
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            min-height: 150px;
+            resize: vertical;
+            font-family: inherit;
+        }
+
+        .btn-group {
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.75rem;
+            margin-top: 2rem;
+        }
+
+        .btn {
+            padding: 0.4rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            font-weight: 600;
+            border: 1px solid transparent;
+        }
+
+        .btn-primary {
+            background: var(--primary-accent);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: var(--bg-secondary);
+            color: var(--text-secondary);
+            border-color: var(--border-color);
+        }
+
+        .btn-cancel {
+            background: transparent;
+            color: var(--text-secondary);
+            border: 1px solid var(--border-color);
+        }
+
+        .status-badge {
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .status-pending {
+            background: #fef08a;
+            color: #854d0e;
+        }
+
+        .status-accepted {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .status-rejected {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .status-none {
+            background: var(--bg-secondary);
+            color: var(--text-secondary);
+        }
+
+        [data-theme="mono"] .logs-table,
+        [data-theme="mono"] .logs-table th {
+            border-width: 1px !important;
+        }
+
+        .selected-row {
+            background-color: rgba(59, 130, 246, 0.15) !important;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="dashboard-container">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="mainSidebar" style="transition: none !important;">
+            <script>
+                if (localStorage.getItem('sidebar_collapsed') === 'true' || localStorage.getItem('sidebar_collapsed') === null) {
+                    document.getElementById('mainSidebar').classList.add('collapsed');
+                }
+            </script>
+            <div class="logo">
+                <div style="display:flex; align-items:center; gap:0.75rem; overflow:hidden;">
+                    <i class="fas fa-robot" style="font-size: 1.5rem;"></i>
+                    <span style="white-space: pre-line; font-size: 1.5rem; line-height: 1.2; font-weight: 700;">{{
+                        messages.dashboard.admin_title }}</span>
+                </div>
+                <i class="fas fa-chevron-left" id="sidebarToggle"
+                    style="cursor: pointer; margin-left: auto; transition: transform 0.3s; color: var(--text-secondary);"></i>
+            </div>
+            <nav class="nav-menu" style="flex:1;">
+                <a href="/"><i class="fas fa-home"></i> <span>{{ messages.dashboard.nav_main }}</span></a>
+                <a href="/dashboard"><i class="fas fa-chart-line"></i> <span>{{ messages.dashboard.nav_dashboard
+                        }}</span></a>
+
+                <!-- System Management Accordion -->
+                <div class="nav-group">
+                    <button class="accordion-btn active" onclick="toggleAccordion(this)">
+                        <span><i class="fas fa-cogs"></i> <span>{{ messages.dashboard.nav_system }}</span></span>
+                        <i class="fas fa-chevron-down"></i>
+                    </button>
+                    <div class="accordion-content open">
+                        <a href="/system/users">
+                            <i class="fas fa-users"></i>
+                            <span>{{ messages.dashboard.nav_users }}</span>
+                        </a>
+                        <a href="/system/templates">
+                            <i class="fas fa-file-alt"></i>
+                            <span>{{ messages.dashboard.nav_templates }}</span>
+                        </a>
+                        <a href="/system/feedback" class="active">
+                            <i class="fas fa-comments"></i>
+                            <span>{{ messages.dashboard.nav_feedback }}</span>
+                        </a>
+                    </div>
+                </div>
+            </nav>
+        </aside>
+
+        <main class="main-content" style="padding:0; overflow:hidden; display:flex; flex-direction:column;">
+            <header class="top-bar"
+                style="justify-content: space-between; padding: 1rem 1.5rem; margin-bottom:0; background:var(--bg-main); flex-shrink:0;">
+                <div style="display:flex; align-items:center; gap:1rem;">
+                    <h2 style="font-size:1.2rem; font-weight:700;">{{ messages.feedback_mgr.title_feedback }}</h2>
+                </div>
+            </header>
+
+            <div class="layout-container" id="layoutContainer">
+                <!-- 1. Filter Area (Top) -->
+                <div class="card filter-area"
+                    style="background: var(--card-bg); padding: 1rem; margin: 0 1rem 1rem 1rem; border:1px solid var(--border-color); border-radius:6px; display:flex; gap:1rem; align-items:flex-end; flex-wrap:wrap; flex-shrink: 0;">
+
+                    <div style="display:flex; flex-direction:column; gap:0.25rem;">
+                        <label style="font-size:0.8rem; font-weight:600; color:var(--text-secondary);">{{
+                            messages.feedback_mgr.lbl_start_date }}</label>
+                        <input type="date" id="searchStartDate" class="form-input" style="min-width:130px;">
+                    </div>
+
+                    <div style="display:flex; flex-direction:column; gap:0.25rem;">
+                        <label style="font-size:0.8rem; font-weight:600; color:var(--text-secondary);">{{
+                            messages.feedback_mgr.lbl_end_date }}</label>
+                        <input type="date" id="searchEndDate" class="form-input" style="min-width:130px;">
+                    </div>
+
+                    <div style="display:flex; flex-direction:column; gap:0.25rem;">
+                        <label style="font-size:0.8rem; font-weight:600; color:var(--text-secondary);">{{
+                            messages.feedback_mgr.lbl_has_feedback }}</label>
+                        <select id="searchFeedback" class="form-select" style="min-width:150px;">
+                            <option value="all">{{ messages.feedback_mgr.opt_all }}</option>
+                            <option value="yes">{{ messages.feedback_mgr.opt_fb_yes }}</option>
+                            <option value="no">{{ messages.feedback_mgr.opt_fb_no }}</option>
+                        </select>
+                    </div>
+
+                    <div style="display:flex; flex-direction:column; gap:0.25rem;">
+                        <label style="font-size:0.8rem; font-weight:600; color:var(--text-secondary);">{{
+                            messages.feedback_mgr.lbl_rec_category }}</label>
+                        <select id="searchCategory" class="form-select" style="min-width:180px; max-width:250px;">
+                            <option value="">{{ messages.feedback_mgr.opt_all }}</option>
+                            <!-- Options injected via JS -->
+                        </select>
+                    </div>
+
+                    <div style="display:flex; flex-direction:column; gap:0.25rem;">
+                        <label style="font-size:0.8rem; font-weight:600; color:var(--text-secondary);">{{
+                            messages.feedback_mgr.lbl_decision }}</label>
+                        <select id="searchDecision" class="form-select" style="min-width:120px;">
+                            <option value="all">{{ messages.feedback_mgr.opt_all }}</option>
+                            <option value="accept">{{ messages.feedback_mgr.decision_accept }}</option>
+                            <option value="reject">{{ messages.feedback_mgr.decision_reject }}</option>
+                            <option value="hold">{{ messages.feedback_mgr.decision_hold }}</option>
+                            <option value="pending">{{ messages.feedback_mgr.decision_pending }}</option>
+                        </select>
+                    </div>
+
+                    <div style="display:flex; flex-direction:column; gap:0.25rem; flex:1;">
+                        <label style="font-size:0.8rem; font-weight:600; color:var(--text-secondary);">{{
+                            messages.feedback_mgr.lbl_search_query }}</label>
+                        <input type="text" id="searchKeyword" onkeypress="if(event.key==='Enter') loadFeedbackLogs(1)"
+                            placeholder="{{ messages.feedback_mgr.ph_search_query }}" class="form-input">
+                    </div>
+
+                    <button onclick="loadFeedbackLogs(1)" class="btn btn-primary" style="padding:0.6rem 1.2rem;">
+                        <i class="fas fa-search"></i> {{ messages.feedback_mgr.btn_search }}
+                    </button>
+                </div>
+
+                <!-- 2. Split Content (Bottom) -->
+                <div class="split-content">
+                    <!-- Grid Area (Left 70%) -->
+                    <div class="grid-area" id="gridArea">
+                        <div style="overflow-y: auto; flex:1;">
+                            <table class="logs-table" style="width:100%; border-collapse: collapse;">
+                                <thead
+                                    style="position:sticky; top:0; background:var(--card-bg); z-index:10; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+                                    <tr>
+                                        <th style="width: 180px; white-space: nowrap;">{{
+                                            messages.feedback_mgr.col_req_time }}</th>
+                                        <th>{{ messages.feedback_mgr.col_query }}</th>
+                                        <th style="width: 200px;">{{ messages.feedback_mgr.col_rec_category }}</th>
+                                        <th style="width: 100px;">{{ messages.feedback_mgr.col_user_id }}</th>
+                                        <th style="width: 80px; text-align:center;">{{
+                                            messages.feedback_mgr.col_feedback }}</th>
+                                        <th style="width: 100px; text-align:center;">{{
+                                            messages.feedback_mgr.col_decision }}</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="feedbackTableBody">
+                                    <!-- Data injected via JS -->
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Pagination -->
+                        <div class="pagination-controls"
+                            style="padding: 0.5rem 1rem; border-top: 1px solid var(--border-color); min-height:50px; display:flex; justify-content:space-between; align-items:center; background:var(--bg-card);">
+                            <div style="flex:1;"></div>
+                            <div style="display:flex; align-items:center; gap:0.5rem;">
+                                <button id="pPrev" onclick="changePage(-1)" disabled class="btn btn-cancel"
+                                    style="padding:0.3rem 0.6rem;"><i class="fas fa-chevron-left"></i></button>
+                                <span id="pageInfo"
+                                    style="margin: 0 0.5rem; font-size:0.9rem; color:var(--text-primary); font-weight:500;">1
+                                    / 1</span>
+                                <button id="pNext" onclick="changePage(1)" disabled class="btn btn-cancel"
+                                    style="padding:0.3rem 0.6rem;"><i class="fas fa-chevron-right"></i></button>
+                            </div>
+                            <div style="flex:1; display:flex; justify-content:flex-end;">
+                                <select id="pageSize" onchange="loadFeedbackLogs(1)" class="form-select"
+                                    style="width:auto; padding:0.3rem;">
+                                    <option value="20" selected>{{ messages.feedback_mgr.opt_rows_20 }}</option>
+                                    <option value="50">{{ messages.feedback_mgr.opt_rows_50 }}</option>
+                                    <option value="100">{{ messages.feedback_mgr.opt_rows_100 }}</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Resizer (Vertical) -->
+                    <div class="resize-handle" id="resizer"></div>
+
+                    <!-- 3. Detail Area (Bottom) -->
+                    <div class="tab-area" id="detailArea" style="padding:0;">
+                        <!-- Tabs Header -->
+                        <div
+                            style="display:flex; border-bottom:1px solid var(--border-color); background:var(--bg-secondary);">
+                            <button class="tab-btn active" onclick="switchTab('info')" id="tab-btn-info"
+                                style="padding:0.8rem 1.5rem; border:none; background:transparent; font-weight:600; cursor:pointer; border-bottom:2px solid var(--primary-accent); color:var(--text-primary);">{{
+                                messages.feedback_mgr.tab_info }}</button>
+                            <button class="tab-btn" onclick="switchTab('decision')" id="tab-btn-decision"
+                                style="padding:0.8rem 1.5rem; border:none; background:transparent; font-weight:600; cursor:pointer; border-bottom:2px solid transparent; color:var(--text-secondary);">{{
+                                messages.feedback_mgr.tab_decision }}</button>
+                        </div>
+
+                        <!-- Tab Content: Info -->
+                        <div id="tab-content-info"
+                            style="flex:1; display:flex; flex-direction:column; padding:1rem; overflow-y:auto;">
+                            <p id="info-placeholder"
+                                style="text-align:center; color: var(--text-secondary); margin-top:2rem; font-size:0.9rem;">
+                                {{ messages.feedback_mgr.msg_select_item }}
+                            </p>
+                            <div id="info-details" style="display:none; flex-direction:column; gap:1rem; height:100%;">
+                                <!-- Content injected via JS -->
+                            </div>
+                        </div>
+
+                        <!-- Tab Content: Decision -->
+                        <div id="tab-content-decision"
+                            style="display:none; flex:1; flex-direction:column; padding:1rem; overflow-y:auto; background:var(--bg-main);">
+                            <div
+                                style="background:var(--card-bg); padding:1.5rem; border:1px solid var(--border-color); border-radius:6px; max-width:800px; margin:0 auto; width:100%;">
+                                <!-- Agent feedback will be appended here -->
+                                <div id="decision-feedback-info"></div>
+
+                                <!-- The decision form has been moved here -->
+                                <form id="decisionForm">
+                                    <input type="hidden" id="decisionLogId">
+                                    <div class="form-group">
+                                        <label class="form-label">{{ messages.feedback_mgr.lbl_decision }}</label>
+                                        <select id="decisionType" class="form-select" required>
+                                            <option value="">>{{ messages.dashboard.ph_search | default("...") }}
+                                            </option>
+                                            <option value="accept">{{ messages.feedback_mgr.decision_accept }}</option>
+                                            <option value="reject">{{ messages.feedback_mgr.decision_reject }}</option>
+                                            <option value="hold">{{ messages.feedback_mgr.decision_hold }}</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">{{ messages.feedback_mgr.lbl_admin_opinion }}</label>
+                                        <textarea id="decisionNote" class="form-textarea"
+                                            placeholder="{{ messages.feedback_mgr.ph_admin_opinion }}"></textarea>
+                                    </div>
+                                    <div id="decisionManagerInfo"
+                                        style="display:none; flex-direction:column; gap:0.25rem; font-size:0.85rem; padding-top:0.5rem; color:var(--text-secondary);">
+                                        <div><strong>{{ messages.feedback_mgr.lbl_confirm_date }}:</strong> <span
+                                                id="lblConfirmDate">-</span></div>
+                                        <div><strong>{{ messages.feedback_mgr.lbl_manager_id }}:</strong> <span
+                                                id="lblManagerId">-</span></div>
+                                    </div>
+                                    <div class="btn-group" style="margin-top:1rem;">
+                                        <button type="button" id="btnSaveDecision" class="btn btn-primary"
+                                            onclick="saveDecision()">{{ messages.feedback_mgr.btn_save }}</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="{{ url_for('dashboard.static', filename='js/dashboard.js') }}"></script>
+    <script>
+        // currentPage is already declared in dashboard.js, so we don't redeclare it with 'let'
+        currentPage = 1;
+        let selectedLogId = null;
+        let currentLogsData = [];
+
+        // UI Resizer logic
+        const resizer = document.getElementById('resizer');
+        const gridArea = document.getElementById('gridArea');
+        let isResizing = false;
+        let containerRect = null;
+
+        const layoutContainer = document.getElementById('layoutContainer');
+        if (resizer) {
+            resizer.addEventListener('mousedown', (e) => {
+                isResizing = true;
+                e.preventDefault();
+                document.body.style.cursor = 'col-resize';
+                document.body.style.userSelect = 'none';
+                containerRect = document.querySelector('.split-content').getBoundingClientRect();
+            });
+
+            document.addEventListener('mousemove', (e) => {
+                if (!isResizing || !containerRect) return;
+
+                requestAnimationFrame(() => {
+                    const gridRect = gridArea.getBoundingClientRect();
+                    let newGridWidth = e.clientX - gridRect.left;
+
+                    // Constraints
+                    const minWidth = 400;
+                    const maxWidth = containerRect.width - 300;
+
+                    if (newGridWidth < minWidth) newGridWidth = minWidth;
+                    if (newGridWidth > maxWidth) newGridWidth = maxWidth;
+
+                    gridArea.style.flex = 'none';
+                    gridArea.style.width = newGridWidth + 'px';
+                });
+            });
+
+            document.addEventListener('mouseup', () => {
+                if (isResizing) {
+                    isResizing = false;
+                    document.body.style.cursor = '';
+                    document.body.style.userSelect = '';
+                }
+            });
+
+            resizer.addEventListener('dblclick', () => {
+                gridArea.style.flex = '0 0 70%';
+                gridArea.style.width = 'auto';
+            });
+        }
+
+        function formatYMDHMS(dateString) {
+            if (!dateString) return '-';
+            const dt = new Date(dateString);
+            if (isNaN(dt.getTime())) return dateString;
+            const yyyy = dt.getFullYear();
+            const mm = String(dt.getMonth() + 1).padStart(2, '0');
+            const dd = String(dt.getDate()).padStart(2, '0');
+            const hh = String(dt.getHours()).padStart(2, '0');
+            const min = String(dt.getMinutes()).padStart(2, '0');
+            const ss = String(dt.getSeconds()).padStart(2, '0');
+            return `${yyyy}-${mm}-${dd} ${hh}:${min}:${ss}`;
+        }
+
+        async function loadCategories() {
+            try {
+                const res = await fetch('/system/api/feedback/categories');
+                const data = await res.json();
+                const selectElement = document.getElementById('searchCategory');
+
+                if (data.success && data.data.length > 0) {
+                    let html = `<option value="">{{ messages.feedback_mgr.opt_all }}</option>`;
+                    data.data.forEach(cat => {
+                        let displayStr = cat;
+                        if (typeof formatTemplateDisplay === 'function') {
+                            displayStr = formatTemplateDisplay(cat);
+                        }
+                        const truncated = displayStr.length > 50 ? displayStr.substring(0, 50) + '...' : displayStr;
+                        html += `<option value="${cat}">${truncated}</option>`;
+                    });
+                    selectElement.innerHTML = html;
+                }
+            } catch (err) {
+                console.error("Failed to load categories", err);
+            }
+        }
+
+        function switchTab(tabName) {
+            const tabs = ['info', 'decision'];
+            tabs.forEach(t => {
+                const btn = document.getElementById('tab-btn-' + t);
+                const content = document.getElementById('tab-content-' + t);
+
+                if (t === tabName) {
+                    btn.classList.add('active');
+                    btn.style.color = 'var(--text-primary)';
+                    btn.style.borderBottom = '2px solid var(--primary-accent)';
+                    content.style.display = 'flex';
+                } else {
+                    btn.classList.remove('active');
+                    btn.style.color = 'var(--text-secondary)';
+                    btn.style.borderBottom = '2px solid transparent';
+                    content.style.display = 'none';
+                }
+            });
+        }
+
+        async function loadFeedbackLogs(page) {
+            currentPage = page;
+            const keyword = document.getElementById('searchKeyword').value;
+            const hasFeedback = document.getElementById('searchFeedback').value;
+            const pageSize = document.getElementById('pageSize').value;
+            const selectedCategory = document.getElementById('searchCategory').value;
+            const catsParam = selectedCategory ? encodeURIComponent(selectedCategory) : '';
+            const startDate = document.getElementById('searchStartDate').value;
+            const endDate = document.getElementById('searchEndDate').value;
+            const searchDecision = document.getElementById('searchDecision').value;
+
+            try {
+                // Fetch from our new API endpoint
+                const url = `/system/api/feedback?page=${page}&per_page=${pageSize}&keyword=${encodeURIComponent(keyword)}&has_feedback=${hasFeedback}&categories=${catsParam}&start_date=${startDate}&end_date=${endDate}&manager_decision=${searchDecision}`;
+                const res = await fetch(url);
+                const data = await res.json();
+
+                if (data.error) {
+                    alert('Error: ' + data.error);
+                    return;
+                }
+
+                currentLogsData = data.data || [];
+                renderTable(currentLogsData);
+
+                // Update Pagination
+                const totalPages = Math.ceil(data.total / pageSize);
+                document.getElementById('pageInfo').innerText = `${currentPage} / ${totalPages || 1}`;
+                document.getElementById('pPrev').disabled = currentPage <= 1;
+                document.getElementById('pNext').disabled = currentPage >= totalPages;
+
+                // Clear selection if reloaded
+                selectLog(null);
+
+            } catch (err) {
+                console.error("Failed to load logs", err);
+                document.getElementById('feedbackTableBody').innerHTML = `<tr><td colspan="5" style="text-align:center; padding:2rem;">{{ messages.feedback_mgr.msg_error_loading }}</td></tr>`;
+            }
+        }
+
+        function renderTable(data) {
+            const tbody = document.getElementById('feedbackTableBody');
+            tbody.innerHTML = '';
+
+            if (data.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:2rem; color:var(--text-secondary);">{{ messages.feedback_mgr.msg_no_data }}</td></tr>`;
+                return;
+            }
+
+            data.forEach(log => {
+                const tr = document.createElement('tr');
+                tr.style.cursor = 'pointer';
+                tr.style.borderBottom = '1px solid var(--border-color)';
+                tr.onclick = () => selectLog(log.id, tr);
+
+                if (selectedLogId === log.id) {
+                    tr.classList.add('selected-row');
+                }
+
+                // Date formatting
+                const timeStr = formatYMDHMS(log.request_time);
+
+                // Query truncate
+                const queryStr = log.question ? (log.question.length > 40 ? log.question.substring(0, 40) + '...' : log.question) : '-';
+
+                // Feedback Badge
+                let fbBadge = '<span class="status-badge status-none">없음</span>';
+                if (log.feedback_answer || log.feedback_category) {
+                    fbBadge = '<span class="status-badge status-pending">있음</span>';
+                }
+
+                // Decision Badge
+                let decisionBadge = '<span class="status-badge status-none" style="background:var(--bg-secondary); color:var(--text-secondary); width:50px;">-</span>';
+                if (log.manager_decision === 'accept') {
+                    decisionBadge = '<span class="status-badge" style="background:#dcfce7; color:#166534; width:50px;">수용</span>';
+                } else if (log.manager_decision === 'reject') {
+                    decisionBadge = '<span class="status-badge" style="background:#fee2e2; color:#b91c1c; width:50px;">반려</span>';
+                } else if (log.manager_decision === 'hold') {
+                    decisionBadge = '<span class="status-badge" style="background:#fef9c3; color:#854d0e; width:50px;">보류</span>';
+                }
+
+                tr.innerHTML = `
+                    <td style="padding:0.6rem; font-size:0.85rem; white-space:nowrap;">${timeStr}</td>
+                    <td style="padding:0.6rem; font-size:0.9rem;" title="${log.question}">${queryStr}</td>
+                    <td style="padding:0.6rem; font-size:0.9rem;">${formatTemplateDisplay(log.category_id)}</td>
+                    <td style="padding:0.6rem; font-size:0.9rem;">${log.actual_user_id || '-'}</td>
+                    <td style="padding:0.6rem; text-align:center;">${fbBadge}</td>
+                    <td style="padding:0.6rem; text-align:center;">${decisionBadge}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function selectLog(id, trElement) {
+            selectedLogId = id;
+
+            const rows = document.getElementById('feedbackTableBody').querySelectorAll('tr');
+            rows.forEach(r => r.classList.remove('selected-row'));
+
+            if (trElement) {
+                trElement.classList.add('selected-row');
+            }
+
+            const infoDetails = document.getElementById('info-details');
+            const placeholder = document.getElementById('info-placeholder');
+
+            if (!id) {
+                infoDetails.style.display = 'none';
+                placeholder.style.display = 'block';
+
+                // For tab
+                document.getElementById('decisionLogId').value = '';
+                document.getElementById('decisionType').value = '';
+                document.getElementById('decisionType').disabled = true;
+                document.getElementById('decisionNote').value = '';
+                document.getElementById('decisionNote').disabled = true;
+
+                const btnSave = document.getElementById('btnSaveDecision');
+                btnSave.disabled = true;
+                btnSave.style.background = 'var(--text-secondary)';
+                btnSave.style.borderColor = 'var(--text-secondary)';
+                btnSave.style.cursor = 'not-allowed';
+
+                document.getElementById('decisionManagerInfo').style.display = 'none';
+                document.getElementById('decision-feedback-info').innerHTML = '';
+
+                return;
+            }
+
+            const log = currentLogsData.find(x => x.id === id);
+            if (!log) return;
+
+            // Pre-fill tab decision form
+            document.getElementById('decisionLogId').value = id;
+            document.getElementById('decisionType').value = log.manager_decision || '';
+            document.getElementById('decisionNote').value = log.manager_opinion || '';
+
+            // Show Manager Info if it exists
+            const mgrInfoBlock = document.getElementById('decisionManagerInfo');
+            if (log.manager_id || log.confirm_date) {
+                mgrInfoBlock.style.display = 'flex';
+                document.getElementById('lblManagerId').textContent = log.manager_id || '-';
+                document.getElementById('lblConfirmDate').textContent = formatYMDHMS(log.confirm_date);
+            } else {
+                mgrInfoBlock.style.display = 'none';
+            }
+
+            placeholder.style.display = 'none';
+            infoDetails.style.display = 'grid';
+            infoDetails.className = 'detail-grid';
+
+            const hasFeedback = !!(log.feedback_category || log.feedback_answer);
+
+            const formatValue = val => val ? val : '<span style="color:var(--text-secondary);">-</span>';
+
+            const recTemplate = window.allTemplates ? window.allTemplates.find(t => String(t.inquiry_category) === String(log.category_id) || String(t.id) === String(log.category_id)) : null;
+            const recTemplateContent = recTemplate ? (recTemplate.general_template || recTemplate.answer || '-') : '-';
+
+            let html = `
+                <div class="detail-row"><span class="detail-label">{{ messages.feedback_mgr.col_req_time }}</span><div class="detail-value">${formatValue(formatYMDHMS(log.request_time))}</div></div>
+                <div class="detail-row"><span class="detail-label">{{ messages.feedback_mgr.col_query }}</span><div class="detail-value">${formatValue(log.question)}</div></div>
+                <div class="detail-row">
+                    <span class="detail-label">{{ messages.dashboard.nav_templates }}</span>
+                    <span class="detail-value">${formatValue(formatTemplateDisplay(log.category_id))}</span>
+                    <div class="detail-value" style="white-space:pre-wrap; min-height:80px;">${formatValue(recTemplateContent)}</div>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">{{ messages.feedback_mgr.lbl_rank_top3 }}</span>
+                    <div class="detail-value" style="display:flex; flex-direction:column; gap:0.5rem; min-height:auto;">
+                        <span><strong>1:</strong> ${formatValue(formatTemplateDisplay(log.no1_class_category_id))}</span>
+                        <span><strong>2:</strong> ${formatValue(formatTemplateDisplay(log.no2_class_category_id))}</span>
+                        <span><strong>3:</strong> ${formatValue(formatTemplateDisplay(log.no3_class_category_id))}</span>
+                    </div>
+                </div>
+            `;
+
+            let feedbackHtml = '';
+            if (hasFeedback) {
+                feedbackHtml = `
+                <div class="detail-row">
+                    <span class="detail-label">{{ messages.feedback_mgr.lbl_fb_template }}</span>
+                    <span class="detail-value">${formatValue(log.feedback_category)}</span>
+                    <div class="detail-value" style="white-space:pre-wrap; min-height:80px;">${formatValue(log.feedback_answer)}</div>
+                </div>
+                <div style="border-top:1px dashed var(--border-color); margin: 1.5rem 0;"></div>
+                `;
+            } else {
+                feedbackHtml = `
+                <div style="text-align:center; padding:1.5rem; color:var(--text-secondary); background:var(--bg-secondary); border-radius:4px; margin-bottom:1.5rem;">
+                    {{ messages.feedback_mgr.msg_no_fb_registered }}
+                </div>`;
+            }
+
+            // Toggle form state based on feedback presence
+            document.getElementById('decisionType').disabled = !hasFeedback;
+            document.getElementById('decisionNote').disabled = !hasFeedback;
+
+            const btnSave = document.getElementById('btnSaveDecision');
+            btnSave.disabled = !hasFeedback;
+            if (!hasFeedback) {
+                btnSave.style.background = 'var(--text-secondary)';
+                btnSave.style.borderColor = 'var(--text-secondary)';
+                btnSave.style.cursor = 'not-allowed';
+            } else {
+                btnSave.style.background = '';
+                btnSave.style.borderColor = '';
+                btnSave.style.cursor = '';
+            }
+
+            infoDetails.innerHTML = html;
+            document.getElementById('decision-feedback-info').innerHTML = feedbackHtml;
+        }
+
+        function changePage(delta) {
+            loadFeedbackLogs(currentPage + delta);
+        }
+
+        async function saveDecision() {
+            const logId = document.getElementById('decisionLogId').value;
+            const type = document.getElementById('decisionType').value;
+            const note = document.getElementById('decisionNote').value;
+
+            if (!type) {
+                alert('{{ messages.feedback_mgr.msg_select_decision }}');
+                return;
+            }
+
+            try {
+                const response = await fetch('/system/api/feedback/decision', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        log_id: logId,
+                        type: type,
+                        note: note
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    alert('{{ messages.feedback_mgr.msg_decision_saved }}');
+                    // Optionally switch back to the main info tab
+                    switchTab('info');
+                    loadFeedbackLogs(currentPage);
+                } else {
+                    alert('{{ messages.feedback_mgr.msg_decision_save_err }}' + (data.error || '알 수 없는 오류'));
+                }
+            } catch (err) {
+                console.error("Save Decision Error:", err);
+                alert('{{ messages.feedback_mgr.msg_decision_net_err }}');
+            }
+        }
+
+        // Init
+        window.addEventListener('DOMContentLoaded', async () => {
+            // Set default end date to today
+            const today = new Date();
+            const yyyy = today.getFullYear();
+            const mm = String(today.getMonth() + 1).padStart(2, '0');
+            const dd = String(today.getDate()).padStart(2, '0');
+            document.getElementById('searchEndDate').value = `${yyyy}-${mm}-${dd}`;
+
+            await loadFullTemplates();
+            loadCategories();
+            loadFeedbackLogs(1);
+
+            // Add messages integration logic similar to dashboard if needed here.
+        });
+    </script>
+</body>
+
+</html>

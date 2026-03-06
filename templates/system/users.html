@@ -159,7 +159,7 @@
             padding: 0.6rem;
             border: 1px solid var(--border-color);
             border-radius: 4px;
-            background: var(--bg-input);
+            background: var(--input-bg);
             color: var(--text-primary);
             font-size: 0.95rem;
         }
@@ -233,13 +233,31 @@
         [data-theme="mono"] .logs-table th {
             border-width: 1px !important;
         }
+
+        .selected-log-row {
+            background-color: rgba(59, 130, 246, 0.15) !important;
+        }
+
+        .log-detail-row {
+            background-color: var(--bg-main) !important;
+            cursor: default !important;
+        }
+
+        .log-detail-row * {
+            cursor: default !important;
+        }
     </style>
 </head>
 
 <body>
     <div class="dashboard-container">
         <!-- Sidebar -->
-        <aside class="sidebar collapsed">
+        <aside class="sidebar" id="mainSidebar" style="transition: none !important;">
+            <script>
+                if (localStorage.getItem('sidebar_collapsed') === 'true' || localStorage.getItem('sidebar_collapsed') === null) {
+                    document.getElementById('mainSidebar').classList.add('collapsed');
+                }
+            </script>
             <div class="logo">
                 <div style="display:flex; align-items:center; gap:0.75rem; overflow:hidden;">
                     <i class="fas fa-robot" style="font-size: 1.5rem;"></i>
@@ -272,6 +290,10 @@
                             <i class="fas fa-file-alt"></i>
                             <span>{{ messages.dashboard.nav_templates }}</span>
                         </a>
+                        <a href="/system/feedback">
+                            <i class="fas fa-comments"></i>
+                            <span>{{ messages.dashboard.nav_feedback }}</span>
+                        </a>
                         <!-- <a href="#">{{ messages.dashboard.nav_groups }}</a> -->
                         <!-- <a href="#">{{ messages.dashboard.nav_menus }}</a> -->
                     </div>
@@ -301,13 +323,13 @@
             <div class="layout-container" id="layoutContainer">
                 <!-- 1. Filter Area -->
                 <div class="card filter-area"
-                    style="background: var(--bg-card); padding: 1rem; margin: 0 1rem 1rem 1rem; border:1px solid var(--border-color); border-radius:6px; display:flex; gap:1rem; align-items:flex-end; flex-wrap:wrap;">
+                    style="background: var(--card-bg); padding: 1rem; margin: 0 1rem 1rem 1rem; border:1px solid var(--border-color); border-radius:6px; display:flex; gap:1rem; align-items:flex-end; flex-wrap:wrap;">
 
                     <div style="display:flex; flex-direction:column; gap:0.25rem;">
                         <label style="font-size:0.8rem; font-weight:600; color:var(--text-secondary);">{{
                             messages.dashboard.label_category }}</label>
                         <select id="searchCategory"
-                            style="padding:0.4rem; border:1px solid var(--border-color); border-radius:4px; font-size:0.9rem; min-width:120px; background:var(--bg-input); color:var(--text-primary);">
+                            style="padding:0.4rem; border:1px solid var(--border-color); border-radius:4px; font-size:0.9rem; min-width:120px; background:var(--input-bg); color:var(--text-primary);">
                             <option value="all">All</option>
                             <option value="id">{{ messages.dashboard.col_userid }}</option>
                             <option value="name">{{ messages.dashboard.col_username }}</option>
@@ -320,7 +342,7 @@
                             messages.dashboard.label_keyword }}</label>
                         <input type="text" id="searchKeyword" onkeypress="if(event.key==='Enter') loadUsers(1)"
                             placeholder="{{ messages.dashboard.ph_search }}"
-                            style="padding:0.4rem; border:1px solid var(--border-color); border-radius:4px; font-size:0.9rem; width:100%; background:var(--bg-input); color:var(--text-primary);">
+                            style="padding:0.4rem; border:1px solid var(--border-color); border-radius:4px; font-size:0.9rem; width:100%; background:var(--input-bg); color:var(--text-primary);">
                     </div>
 
                     <button onclick="loadUsers(1)"
@@ -334,7 +356,7 @@
                     <div style="overflow-y: auto; flex:1;">
                         <table class="logs-table" style="width:100%; border-collapse: collapse;">
                             <thead
-                                style="position:sticky; top:0; background:var(--bg-card); z-index:10; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+                                style="position:sticky; top:0; background:var(--card-bg); z-index:10; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
                                 <tr>
                                     <th>{{ messages.dashboard.col_userid }}</th>
                                     <th>{{ messages.dashboard.col_username }}</th>
@@ -369,7 +391,7 @@
 
                         <div style="flex:1; display:flex; justify-content:flex-end;">
                             <select id="userPageSize" onchange="loadUsers(1)"
-                                style="padding:0.3rem; border:1px solid var(--border-color); border-radius:4px; font-size:0.85rem; cursor:pointer; background:var(--bg-input); color:var(--text-primary);">
+                                style="padding:0.3rem; border:1px solid var(--border-color); border-radius:4px; font-size:0.85rem; cursor:pointer; background:var(--input-bg); color:var(--text-primary);">
                                 <option value="10" selected>10 {{ messages.dashboard.rows_per_page }}</option>
                                 <option value="20">20 {{ messages.dashboard.rows_per_page }}</option>
                                 <option value="50">50 {{ messages.dashboard.rows_per_page }}</option>
@@ -407,7 +429,7 @@
                         style="display:none; flex-direction:column; height:100%; padding-top:1rem; padding-bottom: 2rem;">
                         <div style="flex:1; overflow-y:auto; border:1px solid var(--border-color); border-radius:4px;">
                             <table class="logs-table" style="width:100%;">
-                                <thead style="position:sticky; top:0; background:var(--bg-card);">
+                                <thead style="position:sticky; top:0; background:var(--card-bg);">
                                     <tr>
                                         <th style="width: 60px;">ID</th>
                                         <th style="width: 200px;">{{ messages.dashboard.col_time }}</th>
@@ -849,12 +871,12 @@
                                 <td style="padding:0.5rem; text-align:left;">${tmplDisplay}</td>
                                 <td style="padding:0.5rem; text-align:center;">${l.manual_answer ? `<span class="status-badge success">{{ messages.dashboard.feedback_badge|default('Feedback') }}</span>` : '-'}</td>
                             </tr>
-                            <tr id="u-detail-${l.id}" style="display:none; background-color: var(--bg-secondary); cursor: default;" onmouseover="this.style.background='var(--bg-secondary)'" onmouseout="this.style.background='var(--bg-secondary)'">
+                            <tr id="u-detail-${l.id}" class="log-detail-row" style="display:none;">
                                 <td colspan="5" style="padding:1rem;">
                                      <div class="log-detail-content">
                                         <div class="detail-section">
                                             <h4 style="margin-bottom:0.5rem; font-size:0.9rem; color:var(--text-secondary);">{{ messages.dashboard.detail_query_full }}</h4>
-                                            <div style="padding:0.5rem; background:var(--bg-card); border:1px solid var(--border-color); border-radius:4px; color:var(--text-primary);">${l.query_text}</div>
+                                            <div style="padding:0.5rem; background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:4px; color:var(--text-primary);">${l.query_text}</div>
                                         </div>
                                         
                                         <div class="detail-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1rem;">
@@ -879,7 +901,7 @@
                                         ${l.manual_answer ? `
                                         <div class="detail-section" style="margin-top: 1rem;">
                                             <h4 style="margin-bottom:0.5rem; font-size:0.9rem; color:var(--text-secondary);">{{ messages.dashboard.detail_feedback_content }}</h4>
-                                            <div style="padding:0.5rem; background:var(--bg-card); border:1px solid var(--border-color); border-radius:4px; color:var(--text-primary);">
+                                            <div style="padding:0.5rem; background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:4px; color:var(--text-primary);">
                                                 <div style="margin-bottom:0.5rem;"><strong>Category:</strong> ${l.manual_category || '-'}</div>
                                                 <div style="white-space:pre-wrap;">${l.manual_answer}</div>
                                             </div>
@@ -912,7 +934,7 @@
             // 3. Reset ALL Row Selections
             document.querySelectorAll('.user-log-row').forEach(r => {
                 r.classList.remove('selected-log-row');
-                r.style.background = 'transparent';
+                r.style.background = '';
             });
 
             // 4. If it was NOT visible before click, Open it and Select the row (Expand)
@@ -920,7 +942,6 @@
             if (!isCurrentlyVisible) {
                 if (detailRow) detailRow.style.display = 'table-row';
                 trElem.classList.add('selected-log-row');
-                trElem.style.background = 'var(--bg-hover)';
             }
         }
 

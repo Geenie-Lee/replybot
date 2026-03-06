@@ -1,19 +1,21 @@
 [database]
-host = "127.0.0.1"
+host = "10.10.10.181"
 user = "aidata"
 password = "nexus!234"
 database = "aidata"
-port = 3306
+port = 23306
 
 [server]
+port = 5000
 threshold = 0.35
 top_k = 3
-theme = "blueblackp"
+theme = "whitegrayb"
 enable_duck_animation = false
+jwt_secret = "nexus!@#$%^&*{}<>"
 
 [files]
-model = "model/wavve_randomforest_model.pkl"
-templates = "model/wavve_reply_templates_132.json"
+model = "model/randomforest_model.pkl"
+templates = "model/reply_templates_50.json"
 
 [feedback]
 max_length = 1000

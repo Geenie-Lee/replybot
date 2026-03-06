@@ -1,0 +1,126 @@
+dashboard/templates/dashboard.html:96: <span>피드백</span>
+templates/system/feedback_management.html:8: <title>피드백</title>
+templates/system/feedback_management.html:288: <span>피드백</span>
+templates/system/feedback_management.html:299: <h2 style="font-size:1.2rem; font-weight:700;">피드백 관리</h2>
+templates/system/feedback_management.html:309: <label style="font-size:0.8rem; font-weight:600; color:var(--text-secondary);">시작일자</label>
+templates/system/feedback_management.html:314: <label style="font-size:0.8rem; font-weight:600; color:var(--text-secondary);">종료일자</label>
+templates/system/feedback_management.html:319: <label style="font-size:0.8rem; font-weight:600; color:var(--text-secondary);">피드백 여부</label>
+templates/system/feedback_management.html:321: <option value="all">전체</option>
+templates/system/feedback_management.html:322: <option value="yes">피드백 있음</option>
+templates/system/feedback_management.html:323: <option value="no">피드백 없음</option>
+templates/system/feedback_management.html:328: <label style="font-size:0.8rem; font-weight:600; color:var(--text-secondary);">추천 카테고리</label>
+templates/system/feedback_management.html:330: <option value="">전체</option>
+templates/system/feedback_management.html:336: <label style="font-size:0.8rem; font-weight:600; color:var(--text-secondary);">의사결정</label>
+templates/system/feedback_management.html:338: <option value="all">전체</option>
+templates/system/feedback_management.html:339: <option value="accept">수용</option>
+templates/system/feedback_management.html:340: <option value="reject">반려</option>
+templates/system/feedback_management.html:341: <option value="hold">보류</option>
+templates/system/feedback_management.html:342: <option value="pending">미결정</option>
+templates/system/feedback_management.html:347: <label style="font-size:0.8rem; font-weight:600; color:var(--text-secondary);">검색어 (질의
+templates/system/feedback_management.html:348: 내용)</label>
+templates/system/feedback_management.html:350: placeholder="질의 내용을 검색하세요..." class="form-input">
+templates/system/feedback_management.html:354: <i class="fas fa-search"></i> 검색
+templates/system/feedback_management.html:367: <th style="width: 180px; white-space: nowrap;">요청 일시</th>
+templates/system/feedback_management.html:368: <th>질의 내용</th>
+templates/system/feedback_management.html:369: <th style="width: 200px;">추천 카테고리</th>
+templates/system/feedback_management.html:370: <th style="width: 100px;">사용자 ID</th>
+templates/system/feedback_management.html:371: <th style="width: 80px; text-align:center;">피드백</th>
+templates/system/feedback_management.html:372: <th style="width: 100px; text-align:center;">의사결정</th>
+templates/system/feedback_management.html:397: <option value="20" selected>20행</option>
+templates/system/feedback_management.html:398: <option value="50">50행</option>
+templates/system/feedback_management.html:399: <option value="100">100행</option>
+templates/system/feedback_management.html:414: style="padding:0.8rem 1.5rem; border:none; background:transparent; font-weight:600; cursor:pointer; 
+templates/system/feedback_management.html:416: style="padding:0.8rem 1.5rem; border:none; background:transparent; font-weight:600; cursor:pointer; 
+templates/system/feedback_management.html:424: 목록에서 항목을 선택하세요.
+templates/system/feedback_management.html:443: <label class="form-label">의사결정</label>
+templates/system/feedback_management.html:445: <option value="">선택하세요...</option>
+templates/system/feedback_management.html:446: <option value="accept">수용</option>
+templates/system/feedback_management.html:447: <option value="reject">반려</option>
+templates/system/feedback_management.html:448: <option value="hold">보류</option>
+templates/system/feedback_management.html:452: <label class="form-label">관리자 의견</label>
+templates/system/feedback_management.html:454: placeholder="의사결정 사유나 추가 작업 필요사항 등을 기록하세요."></textarea>
+templates/system/feedback_management.html:458: <div><strong>확인 일시:</strong> <span id="lblConfirmDate">-</span></div>
+templates/system/feedback_management.html:459: <div><strong>관리자 ID:</strong> <span id="lblManagerId">-</span></div>
+templates/system/feedback_management.html:463: onclick="saveDecision()">저장</button>
+templates/system/feedback_management.html:550: let html = `<option value="">전체</option>`;
+templates/system/feedback_management.html:622: document.getElementById('feedbackTableBody').innerHTML = `<tr><td colspan="5" style="text-align:cent
+templates/system/feedback_management.html:631: tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:2rem; color:var(--text-seco
+templates/system/feedback_management.html:652: let fbBadge = '<span class="status-badge status-none">없음</span>';
+templates/system/feedback_management.html:654: fbBadge = '<span class="status-badge status-pending">있음</span>';
+templates/system/feedback_management.html:660: decisionBadge = '<span class="status-badge" style="background:#dcfce7; color:#166534; width:50px;">수
+templates/system/feedback_management.html:662: decisionBadge = '<span class="status-badge" style="background:#fee2e2; color:#b91c1c; width:50px;">반
+templates/system/feedback_management.html:664: decisionBadge = '<span class="status-badge" style="background:#fef9c3; color:#854d0e; width:50px;">보
+templates/system/feedback_management.html:745: <div class="detail-row"><span class="detail-label">요청 일시</span><div class="detail-value">${formatVal
+templates/system/feedback_management.html:746: <div class="detail-row"><span class="detail-label">질의 내용</span><div class="detail-value" style="back
+templates/system/feedback_management.html:748: <span class="detail-label">추천 템플릿</span>
+templates/system/feedback_management.html:753: <span class="detail-label">추천 랭킹 (Top 3)</span>
+templates/system/feedback_management.html:766: <span class="detail-label">피드백 템플릿</span>
+templates/system/feedback_management.html:775: 이 질의에 대해 등록된 피드백이 없습니다.
+templates/system/feedback_management.html:809: alert('의사결정 종류를 선택하세요.');
+templates/system/feedback_management.html:829: alert('의사결정 내용이 성공적으로 저장되었습니다.');
+templates/system/feedback_management.html:834: alert('저장 중 오류가 발생했습니다: ' + (data.error || '알 수 없는 오류'));
+templates/system/feedback_management.html:838: alert('저장 중 네트워크 오류가 발생했습니다.');
+templates/system/templates_management.html:8: <title>템플릿 관리</title>
+templates/system/templates_management.html:261: <span>피드백</span>
+templates/system/templates_management.html:272: <h2 style="font-size:1.2rem; font-weight:700;">템플릿 관리</h2>
+templates/system/templates_management.html:283: <i class="fas fa-edit"></i> 답변 수정
+templates/system/templates_management.html:293: <label style="font-size:0.8rem; font-weight:600; color:var(--text-secondary);">카테고리</label>
+templates/system/templates_management.html:296: <option value="">전체</option>
+templates/system/templates_management.html:304: <label style="font-size:0.8rem; font-weight:600; color:var(--text-secondary);">답변 템플릿</label>
+templates/system/templates_management.html:306: placeholder="검색어를 입력하세요..."
+templates/system/templates_management.html:311: <i class="fas fa-search"></i> 검색
+templates/system/templates_management.html:324: <th>카테고리 <span id="categoryCount"></span></th>
+templates/system/templates_management.html:325: <th style="width: 80px;">변경횟수</th>
+templates/system/templates_management.html:344: style="padding:0.8rem 1.5rem; border:none; background:transparent; font-weight:600; cursor:pointer; 
+templates/system/templates_management.html:345: 정보</button>
+templates/system/templates_management.html:347: style="padding:0.8rem 1.5rem; border:none; background:transparent; font-weight:600; cursor:pointer; 
+templates/system/templates_management.html:348: 이력</button>
+templates/system/templates_management.html:356: 목록에서 템플릿을 선택하세요.
+templates/system/templates_management.html:372: <th style="padding:0.5rem; width:180px;">일자</th>
+templates/system/templates_management.html:374: <th style="padding:0.5rem;">카테고리</th>
+templates/system/templates_management.html:375: <th style="padding:0.5rem; width:100px;">변경자</th>
+templates/system/templates_management.html:382: 데이터 없음</td>
+templates/system/templates_management.html:394: style="font-size:0.8rem; font-weight:700; color:var(--text-secondary);">변경 전
+templates/system/templates_management.html:401: style="font-size:0.8rem; font-weight:700; color:var(--primary-accent);">변경 후
+templates/system/templates_management.html:418: <div class="modal-header">답변 수정</div>
+templates/system/templates_management.html:422: <label class="form-label">카테고리</label>
+templates/system/templates_management.html:428: 답변 내용
+templates/system/templates_management.html:437: <button type="button" class="btn btn-cancel" onclick="closeModal('editTemplateModal')">취소</button>
+templates/system/templates_management.html:438: <button type="submit" class="btn btn-primary">저장</button>
+templates/system/templates_management.html:574: tbody.innerHTML = `<tr><td colspan="3" style="text-align:center; padding:2rem; color:var(--text-seco
+templates/system/templates_management.html:604: <div class="detail-row"><span class="detail-label">카테고리</span><div class="detail-value" style="min-h
+templates/system/templates_management.html:605: <div class="detail-row" style="flex:1;"><span class="detail-label">답변 템플릿</span><div class="detail-v
+templates/system/templates_management.html:671: if (tbody) tbody.innerHTML = `<tr><td colspan="4" style="padding:1rem;">오류 발생</td></tr>`;
+templates/system/templates_management.html:681: tbody.innerHTML = `<tr><td colspan="4" style="padding:1rem; text-align:center; color:var(--text-seco
+templates/system/templates_management.html:784: alert('Masking 처리 중 오류가 발생했습니다: ' + err);
+templates/system/templates_management.html:826: alert('저장되었습니다.');
+templates/system/templates_management.html:830: alert('오류 발생: ' + result.error);
+templates/system/templates_management.html:833: alert('통신 오류: ' + err);
+templates/system/users.html:295: <span>피드백</span>
+templates/login.html:88: <h3 class="modal-title">비밀번호 설정</h3>
+templates/login.html:89: <p class="modal-desc">초기 비밀번호를 설정해주세요.</p>
+templates/login.html:93: <label>사용자 ID</label>
+templates/login.html:99: <label>이름</label>
+templates/login.html:110: <label>비밀번호</label>
+templates/login.html:114: <label>비밀번호 확인</label>
+templates/login.html:118: <button type="submit" class="btn-login" style="margin-top:1rem;">저장</button>
+templates/login.html:133: <h3 class="modal-title" data-i18n="login.register_title">사용자 등록</h3>
+templates/login.html:134: <p class="modal-desc" data-i18n="login.register_desc">새로운 관리자 계정을 생성합니다.</p>
+templates/login.html:145: <label data-i18n="login.label_userid">사용자 ID</label>
+templates/login.html:147: placeholder="사번 또는 ID">
+templates/login.html:150: <label data-i18n="login.label_name">이름</label>
+templates/login.html:152: placeholder="이름">
+templates/login.html:155: <label data-i18n="login.label_email">이메일</label>
+templates/login.html:157: placeholder="이메일 주소">
+templates/login.html:160: <label data-i18n="login.label_password">비밀번호</label>
+templates/login.html:162: data-i18n-placeholder="login.placeholder_password" placeholder="비밀번호 설정">
+templates/login.html:165: <label data-i18n="login.label_password_confirm">비밀번호 확인</label>
+templates/login.html:167: data-i18n-placeholder="login.placeholder_password_confirm" placeholder="비밀번호 확인">
+templates/login.html:170: <button type="submit" class="btn-primary" data-i18n="login.btn_signup_submit">등록하기</button>
+templates/login.html:172: data-i18n="login.btn_cancel">취소</button>
+templates/index.html:83: 대시보드
+templates/error.html:8: <title>오류 - 신세계라이브쇼핑 템플릿 서버</title>
+templates/error.html:68: <h1>서버 오류</h1>
+templates/error.html:70: <strong>오류 내용:</strong><br>
+templates/error.html:73: <p>서버 관리자에게 문의하거나 잠시 후 다시 시도해주세요.</p>
+templates/error.html:74: <a href="/" class="back-btn">메인으로 돌아가기</a>

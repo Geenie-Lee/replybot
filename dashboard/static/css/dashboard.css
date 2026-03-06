@@ -25,7 +25,7 @@ body {
 /* Sidebar */
 .sidebar {
     width: 260px;
-    background: var(--bg-secondary);
+    background: var(--sidebar-bg, var(--bg-secondary));
     border-right: var(--line-width) solid var(--line-color);
     display: flex;
     flex-direction: column;
@@ -136,14 +136,14 @@ body {
 }
 
 .nav-menu a:hover {
-    background: rgba(255, 255, 255, 0.05);
-    color: white;
+    background: var(--sidebar-hover, rgba(255, 255, 255, 0.05));
+    color: var(--sidebar-hover-text, white);
     transform: translateX(4px);
 }
 
 .nav-menu a.active {
-    background: #0F172A;
-    color: #ffffff;
+    background: var(--sidebar-active, #0F172A);
+    color: var(--sidebar-active-text, #ffffff);
     border-left: 6px solid var(--primary-accent);
 }
 
@@ -172,13 +172,13 @@ body {
 }
 
 .accordion-btn:hover {
-    background: rgba(255, 255, 255, 0.05);
-    color: white;
+    background: var(--sidebar-hover, rgba(255, 255, 255, 0.05));
+    color: var(--sidebar-hover-text, white);
 }
 
 .accordion-btn.active {
-    background: #0F172A;
-    color: #ffffff;
+    background: var(--sidebar-active, #0F172A);
+    color: var(--sidebar-active-text, #ffffff);
     border-left: 6px solid var(--primary-accent);
 }
 
@@ -584,4 +584,8 @@ body {
     background: var(--success-bg);
     color: var(--success-color);
     border: var(--line-width) solid var(--line-color);
+}
+
+.modal-content {
+    background: var(--popup-bg, var(--card-bg));
 }

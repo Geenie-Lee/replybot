@@ -17,6 +17,7 @@ from sqlalchemy.orm import sessionmaker
 from flask import Flask, request, jsonify, render_template, redirect, url_for, make_response, send_from_directory
 from flask_cors import CORS
 import logging
+import jwt
 
 # 로깅 설정
 logging.basicConfig(
@@ -121,7 +122,7 @@ def initialize_server():
 
             # 3. Security Middleware 등록
             # NOTE: /assets prefix used to bypass Nginx /static block
-            exempt = [r'^/login$', r'^/logout$', r'^/assets/.*', r'^/static/.*', r'^/dashboard/static/.*', r'^/favicon.ico$', r'^/api/messages$', r'^/register$']
+            exempt = [r'^/login$', r'^/logout$', r'^/assets/.*', r'^/static/.*', r'^/dashboard/static/.*', r'^/favicon.ico$', r'^/api/messages$', r'^/register$', r'^/sso$', r'^/api/ai_answer$']
             SecurityMiddleware(app, auth_manager, exempt_routes=exempt)
             
             # Make AuthManager accessible to blueprints
@@ -511,6 +512,8 @@ def login():
                 
                 resp = make_response(redirect(url_for('index')))
                 resp.set_cookie('session_token', token, httponly=True, samesite='Lax', max_age=3600)
+                # 일반 로그인은 sso와 구분
+                resp.set_cookie('login_type', 'normal', httponly=False, samesite='Lax', max_age=3600)
                 return resp
             
             elif msg == "SETUP_REQUIRED":
@@ -594,14 +597,75 @@ def register():
             
     return redirect(url_for('login'))
 
+@app.route('/sso')
+def sso_login():
+    """포탈 SSO 링크를 통한 팝업 접근 (JWT 지원)"""
+    token_str = request.args.get('token')
+    if not token_str:
+        return "SSO Error: token 파라미터가 필요합니다.", 400
+        
+    try:
+        server_conf = get_server_config_data()
+        jwt_secret = server_conf.get('server', {}).get('jwt_secret', '')
+        
+        if jwt_secret:
+            decoded_token = jwt.decode(token_str, jwt_secret, algorithms=["HS256"])
+        else:
+            # 임시 연동/개발 편의를 위해 secret이 없으면 서명 검증 없이 복호화 진행
+            decoded_token = jwt.decode(token_str, options={"verify_signature": False})
+            
+        user_id = decoded_token.get('user_id') or decoded_token.get('sub')
+        
+        if not user_id:
+            return "SSO Error: JWT 내에 사용자 ID(user_id 또는 sub) 정보가 없습니다.", 400
+            
+    except jwt.ExpiredSignatureError:
+        return "SSO Error: 토큰이 만료되었습니다.", 401
+    except jwt.InvalidTokenError as e:
+        return f"SSO Error: 유효하지 않은 토큰입니다. ({str(e)})", 401
+    except Exception as e:
+        return f"SSO Error: 토큰 검증 오류 ({str(e)})", 500
+        
+    client_ip = request.remote_addr
+    
+    if not auth_manager:
+        return "Auth System Not Initialized", 500
+        
+    # 사용자가 DB에 존재하는지 식별
+    user = auth_manager._get_user_info(user_id)
+    if not user:
+        return f"SSO Error: 사용자({user_id})가 시스템에 등록되어 있지 않습니다.", 401
+        
+    request_info = {
+        "ip": client_ip,
+        "user_agent": request.headers.get('User-Agent')
+    }
+    
+    # 세션 발급 
+    token = auth_manager.create_session(user_id, request_info)
+    
+    resp = make_response(redirect(url_for('index')))
+    resp.set_cookie('session_token', token, httponly=True, samesite='Lax', max_age=3600)
+    # 로그인 방식을 쿠키에 기록하여 로그아웃 시 구분
+    resp.set_cookie('login_type', 'sso', httponly=False, samesite='Lax', max_age=3600)
+    return resp
+
 @app.route('/logout')
 def logout():
     token = request.cookies.get('session_token')
+    login_type = request.cookies.get('login_type')
+    
     if token and auth_manager:
         auth_manager.logout(token)
     
-    resp = make_response(redirect(url_for('login')))
+    # SSO(포탈 링크 팝업) 접속자인 경우 창 닫기
+    if login_type == 'sso':
+        resp = make_response("<script>window.close();</script>")
+    else:
+        resp = make_response(redirect(url_for('login')))
+        
     resp.set_cookie('session_token', '', expires=0)
+    resp.set_cookie('login_type', '', expires=0)
     return resp
 
 @app.route('/')
@@ -628,7 +692,7 @@ def index():
             if db_session_maker:
                 db = db_session_maker()
                 try:
-                    user_res = db.execute(text("SELECT username, email FROM users WHERE id = :uid"), {"uid": sess['user_id']}).mappings().first()
+                    user_res = db.execute(text("SELECT username, email, admin_yn FROM users WHERE id = :uid"), {"uid": sess['user_id']}).mappings().first()
                     if user_res:
                         current_user.update(dict(user_res))
                 except Exception as e:
@@ -1111,6 +1175,64 @@ def analyze_morphological():
             "error": f"형태소 분석 오류: {str(e)}"
         }), 500
 
+@app.route('/api/ai_answer', methods=['POST'])
+def ai_answer():
+    """
+    타 시스템에서 RESTful로 질의를 받아 
+    자동 답변 1순위에 해당하는 카테고리Id, 카테고리, 답변을 json으로 리턴해주는 API
+    """
+    try:
+        if not randomforest_classifier:
+            return jsonify({"error": "시스템이 초기화되지 않았습니다"}), 500
+        
+        data = request.get_json()
+        if not data:
+            return jsonify({"error": "JSON 요청 데이터를 찾을 수 없습니다"}), 400
+        
+        user_query = data.get('query', '').strip()
+        if not user_query:
+            return jsonify({"error": "query 파라미터가 비어있습니다"}), 400
+            
+        # 1. 키워드 추출
+        customer_keywords = extract_morphological_keywords(user_query)
+        
+        # 2. 템플릿 예측
+        prediction_result = predict_template_with_randomforest(customer_keywords)
+        
+        if not prediction_result:
+            return jsonify({"error": "템플릿 예측에 실패했습니다"}), 500
+            
+        best_template_id = prediction_result['predicted_template_id']
+        
+        # 3. 예측된 템플릿 정보 가져오기
+        template = templates_by_id.get(best_template_id)
+        
+        # 4. Fallback 처리
+        if not template and 'top_probabilities' in prediction_result:
+            for prob in prediction_result['top_probabilities']:
+                if prob['template_id'] in templates_by_id:
+                    template = templates_by_id[prob['template_id']]
+                    best_template_id = prob['template_id']
+                    break
+        
+        # 5. 결과 존재 여부 확인
+        if not template:
+            return jsonify({"error": "해당 템플릿을 찾을 수 없습니다"}), 404
+            
+        # 6. 응답 데이터 구성
+        answer_text = template.get('general_template', template.get('template_text', template.get('content', '')))
+        category_name = template.get('inquiry_category', template.get('category', ''))
+        
+        return jsonify({
+            "categoryId": best_template_id,
+            "category": category_name,
+            "answer": answer_text
+        })
+        
+    except Exception as e:
+        logger.error(f"❌ 외부 시스템 API 응답 오류: {e}")
+        return jsonify({"error": f"서버 오류: {str(e)}"}), 500
+
 # Gunicorn 등 WSGI 서버 환경에서 실행 시 초기화 수행
 # __name__이 'web_server'일 때도 실행되어야 함
 if __name__ != "__main__":
@@ -1126,12 +1248,16 @@ if __name__ == '__main__':
     
     # 서버 초기화
     if initialize_server():
+        # 설정에서 포트 가져오기
+        server_config = get_server_config_data()
+        server_port = server_config.get('server', {}).get('port', 5000)
+        
         logger.info("\n🚀 웹 서버를 시작합니다...")
-        logger.info("📱 웹 인터페이스: http://localhost:5000")
-        logger.info("🔧 API 엔드포인트: http://localhost:5000/api/find_template")
-        logger.info("🔤 형태소 분석 API: http://localhost:5000/api/morphological_analysis")
+        logger.info(f"📱 웹 인터페이스: http://localhost:{server_port}")
+        logger.info(f"🔧 API 엔드포인트: http://localhost:{server_port}/api/find_template")
+        logger.info(f"🔤 형태소 분석 API: http://localhost:{server_port}/api/morphological_analysis")
         
         # Flask 개발 서버 실행
-        app.run(host='0.0.0.0', port=5000, debug=True, use_reloader=False)
+        app.run(host='0.0.0.0', port=server_port, debug=True, use_reloader=False)
     else:
         logger.critical("❌ 서버 초기화 실패로 종료합니다")

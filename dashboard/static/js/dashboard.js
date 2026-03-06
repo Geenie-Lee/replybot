@@ -36,6 +36,14 @@ document.addEventListener('DOMContentLoaded', async function () {
                 sidebarToggle.classList.add('fa-chevron-left');
             }
         }
+
+        // Remove the hardcoded transition:none inline style applied to HTML tags
+        // to restore normal smooth CSS animation functionality for subsequent toggles.
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                sidebar.style.transition = '';
+            });
+        });
     }
 
     // Default Date Filter Removed
@@ -398,7 +406,7 @@ function renderLogs(logs) {
     }
 
     tbody.innerHTML = logs.map(log => `
-        <tr class="log-row" onclick="toggleLogDetail(${log.id})" style="cursor: pointer;">
+        <tr class="log-row" onclick="toggleLogDetail(${log.id}, this)" style="cursor: pointer;">
             <td style="text-align: right;">${log.id}</td>
             <td style="text-align: center;">${log.request_time}</td>
             <td title="${escapeHtml(log.query_text)}"><div class="truncate">${escapeHtml(log.query_text)}</div></td>
@@ -448,20 +456,27 @@ function renderLogs(logs) {
     `).join('');
 }
 
-function toggleLogDetail(id) {
+function toggleLogDetail(id, trElem) {
     const detailRow = document.getElementById(`detail-${id}`);
-
-    // Check if the clicked row is currently visible
-    const isVisible = detailRow.style.display === 'table-row';
+    const isVisible = detailRow && detailRow.style.display === 'table-row';
 
     // Close ALL detail rows
     document.querySelectorAll('.log-detail-row').forEach(row => {
         row.style.display = 'none';
     });
 
-    // If it was NOT visible before, open it now (otherwise leave it closed)
+    // Reset ALL Row Selections
+    document.querySelectorAll('.log-row').forEach(row => {
+        row.classList.remove('selected-log-row');
+        row.style.background = '';
+    });
+
+    // If it was NOT visible before, open it and select row
     if (!isVisible) {
-        detailRow.style.display = 'table-row';
+        if (detailRow) detailRow.style.display = 'table-row';
+        if (trElem) {
+            trElem.classList.add('selected-log-row');
+        }
     }
 }
 
@@ -587,6 +602,25 @@ function getThemeConfig() {
                 textLow: '#1e293b',
                 border: '#cbd5e1',
                 headerBg: '#f8fafc'
+            }
+        };
+    } else if (theme === 'whitegrayb') {
+        return {
+            text: '#1e293b', // slate-800
+            line: '#014DFF', // Primary Accent
+            grid: 'rgba(0, 0, 0, 0.05)',
+            cardBg: '#ffffff', // Card Background Updated to White
+            pieColors: ['#60a5fa', '#94a3b8', '#93c5fd', '#cbd5e1', '#bfdbfe'],
+            barBg: '#bfdbfe',
+            barBorder: '#014DFF',
+            heatmap: {
+                bgHigh: '#60a5fa',
+                bgMid: '#cbd5e1',
+                bgLow: '#f8fafc',
+                textHigh: '#ffffff',
+                textLow: '#1e293b',
+                border: '#e2e8f0', // Matches theme border
+                headerBg: '#F5F4FA' // Content Area BG
             }
         };
     } else {

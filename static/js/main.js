@@ -118,7 +118,7 @@ async function findTemplate() {
                         </div>
                     </div>
                     <div class="result-meta">
-                        <span><strong style="color:var(--text-primary);">제목:</strong> ${tpl1.title}</span>
+
                         <span><strong style="color:var(--text-primary);">카테고리:</strong> <span class="meta-tag">${tpl1.category}</span></span>
                     </div>
                     <pre id="content-1" class="result-content-pre">${tpl1.content || tpl1.template_text}</pre>
@@ -146,7 +146,7 @@ async function findTemplate() {
                         </div>
                     </div>
                     <div class="result-meta">
-                        <span><strong style="color:var(--text-primary);">제목:</strong> ${tpl2.title}</span>
+
                         <span><strong style="color:var(--text-primary);">카테고리:</strong> <span class="meta-tag">${tpl2.category}</span></span>
                     </div>
                     <pre id="content-2" class="result-content-pre" style="max-height:300px;">${tpl2.content || tpl2.template_text}</pre>
@@ -170,7 +170,7 @@ async function findTemplate() {
                             </div>
                         </div>
                         <div class="result-meta">
-                            <span><strong style="color:var(--text-primary);">제목:</strong> ${tpl3.title}</span>
+    
                             <span><strong style="color:var(--text-primary);">카테고리:</strong> <span class="meta-tag">${tpl3.category}</span></span>
                         </div>
                         <pre id="content-3" class="result-content-pre" style="max-height:300px;">${tpl3.content || tpl3.template_text}</pre>

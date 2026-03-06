@@ -120,3 +120,53 @@
     --line-color: #cbd5e1;
     --border-color: #cbd5e1;
 }
+
+/* White-Gray-Blue (User Requested) */
+[data-theme="whitegrayb"] {
+    --bg-main: #ffffff;
+    /* Content Area Background */
+    --bg-secondary: #ffffff;
+    /* Selected Menu / Menu Hover (Outer BG) */
+    --card-bg: #ffffff;
+    /* Card Layout Background (Tables, Grids) */
+    --card-border: #DFDDE0;
+    /* Matches Card BG tone */
+    --text-primary: #1e293b;
+    /* Dark text for contrast */
+    --text-secondary: #475569;
+    --text-muted: #64748b;
+    --primary-accent: #014DFF;
+    /* Emphasis */
+    --primary-glow: rgba(1, 77, 255, 0.3);
+    --secondary-accent: #3b82f6;
+    /* Complementary Blue */
+    --success-color: #10b981;
+    --success-bg: #ecfdf5;
+    --danger-color: #ef4444;
+    --crown-color: #eab308;
+
+    /* Geometry */
+    --border-radius-lg: 16px;
+    --border-radius-md: 8px;
+    --line-width: 1px;
+    --font-main: 'Inter', system-ui, -apple-system, sans-serif;
+
+    /* Soft Shadows */
+    --shadow-color: rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 4px 6px -1px var(--shadow-color);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    --shadow-glow: 0 0 15px rgba(1, 77, 255, 0.15);
+
+    --line-color: #cbd5e1;
+    --border-color: #cbd5e1;
+
+    --input-bg: #ffffff;
+    --popup-bg: #ffffff;
+
+    /* Sidebar Specific */
+    --sidebar-bg: #ffffff;
+    --sidebar-hover: #F5F4FA;
+    --sidebar-hover-text: #1e293b;
+    --sidebar-active: #F5F4FA;
+    --sidebar-active-text: #014DFF;
+}

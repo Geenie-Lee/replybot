@@ -53,6 +53,23 @@ def get_template_map():
 
 @dashboard_bp.route('/')
 def index():
+    from flask import request, redirect, url_for, make_response
+    
+    # Check Admin Access
+    token = request.cookies.get('session_token')
+    auth_manager = current_app.config.get('AUTH_MANAGER')
+    
+    if not token or not auth_manager:
+        return redirect('/login')
+        
+    sess = auth_manager.get_session(token)
+    if not sess:
+        return redirect('/login')
+        
+    user_info = auth_manager._get_user_info(sess.get('user_id'))
+    if not user_info or user_info.get('admin_yn') != 'Y':
+        return make_response("접근 권한이 없습니다. (관리자만 접근 가능합니다.)", 403)
+
     all_messages = get_all_messages()
     
     # Get Current Theme

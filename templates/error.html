@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
-    <title>오류 - 신세계라이브쇼핑 템플릿 서버</title>
+    <title>{{ messages.common.title_error | default(messages.error_pages.title_error)|default("Error") }}</title>
     <style>
         body {
             font-family: 'Malgun Gothic', sans-serif;
@@ -65,13 +65,13 @@
 <body>
     <div class="container">
         <div class="error-icon">⚠️</div>
-        <h1>서버 오류</h1>
+        <h1>{{ messages.error_pages.title_server_error }}</h1>
         <div class="error-message">
-            <strong>오류 내용:</strong><br>
+            <strong>{{ messages.error_pages.lbl_error_detail }}</strong><br>
             {{ error }}
         </div>
-        <p>서버 관리자에게 문의하거나 잠시 후 다시 시도해주세요.</p>
-        <a href="/" class="back-btn">메인으로 돌아가기</a>
+        <p>{{ messages.error_pages.msg_contact_admin }}</p>
+        <a href="/" class="back-btn">{{ messages.error_pages.btn_go_main }}</a>
     </div>
 </body>
 

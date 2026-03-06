@@ -10,11 +10,43 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/themes.css') }}">
     <link rel="stylesheet" href="{{ url_for('dashboard.static', filename='css/dashboard.css') }}">
     <script src="{{ url_for('dashboard.static', filename='vendor/js/chart.js') }}"></script>
+    <style>
+        /* Override Dashboard Log Table Styles to match User Management */
+        .selected-log-row {
+            background-color: rgba(59, 130, 246, 0.15) !important;
+        }
+
+        .log-detail-row,
+        .log-detail-row td {
+            background-color: var(--bg-main) !important;
+            cursor: default !important;
+        }
+
+        .log-detail-row * {
+            cursor: default !important;
+        }
+
+        .log-detail-content {
+            background-color: var(--bg-main) !important;
+            border: 1px solid var(--border-color);
+            /* Match user view container if needed, or keep simple */
+        }
+
+        .detail-box {
+            background-color: var(--bg-secondary) !important;
+        }
+    </style>
 </head>
 
 <body>
     <div class="dashboard-container">
-        <aside class="sidebar collapsed">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="mainSidebar" style="transition: none !important;">
+            <script>
+                if (localStorage.getItem('sidebar_collapsed') === 'true' || localStorage.getItem('sidebar_collapsed') === null) {
+                    document.getElementById('mainSidebar').classList.add('collapsed');
+                }
+            </script>
             <div class="logo">
                 <div style="display:flex; align-items:center; gap:0.75rem; overflow:hidden;">
                     <i class="fas fa-robot" style="font-size: 1.5rem;"></i>
@@ -58,6 +90,10 @@
                             <i class="fas fa-file-alt"></i>
                             <span data-i18n="nav_templates">{{ all_messages['ko']['dashboard']['nav_templates']
                                 }}</span>
+                        </a>
+                        <a href="/system/feedback">
+                            <i class="fas fa-comments"></i>
+                            <span data-i18n="nav_feedback">{{ all_messages['ko']['dashboard']['nav_feedback'] }}</span>
                         </a>
                         <!-- <a href="#" data-i18n="nav_groups">{{ all_messages['ko']['dashboard']['nav_groups'] }}</a> -->
                         <!-- <a href="#" data-i18n="nav_menus">{{ all_messages['ko']['dashboard']['nav_menus'] }}</a> -->

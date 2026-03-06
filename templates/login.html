@@ -85,18 +85,18 @@
         <div class="modal-content">
             <span class="close-modal"
                 onclick="document.getElementById('setPwModal').classList.add('hidden')">&times;</span>
-            <h3 class="modal-title">비밀번호 설정</h3>
-            <p class="modal-desc">초기 비밀번호를 설정해주세요.</p>
+            <h3 class="modal-title">{{ messages.login_page.title_set_pw }}</h3>
+            <p class="modal-desc">{{ messages.login_page.desc_set_pw }}</p>
 
             <form action="/set_initial_password" method="POST" onsubmit="return handleSetPassword(event)">
                 <div class="form-group">
-                    <label>사용자 ID</label>
+                    <label>{{ messages.login_page.label_userid }}</label>
                     <input type="text" class="input-field" name="user_id"
                         value="{{ setup_user.id if setup_user else '' }}" readonly
                         style="background:#f1f5f9; cursor:not-allowed; opacity:0.8;">
                 </div>
                 <div class="form-group">
-                    <label>이름</label>
+                    <label>{{ messages.login_page.label_name }}</label>
                     <input type="text" class="input-field" value="{{ setup_user.username if setup_user else '' }}"
                         readonly style="background:#f1f5f9; cursor:not-allowed; opacity:0.8;">
                 </div>
@@ -107,15 +107,15 @@
                 </div>
 
                 <div class="form-group">
-                    <label>비밀번호</label>
+                    <label>{{ messages.login_page.label_password }}</label>
                     <input type="password" class="input-field" name="password" id="setPw" required>
                 </div>
                 <div class="form-group">
-                    <label>비밀번호 확인</label>
+                    <label>{{ messages.login_page.label_password_confirm }}</label>
                     <input type="password" class="input-field" id="setPwConfirm" required>
                 </div>
 
-                <button type="submit" class="btn-login" style="margin-top:1rem;">저장</button>
+                <button type="submit" class="btn-login" style="margin-top:1rem;">{{ messages.login_page.btn_save_pw }}</button>
             </form>
         </div>
     </div>
@@ -130,8 +130,8 @@
                         d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
                 </svg>
             </div>
-            <h3 class="modal-title" data-i18n="login.register_title">사용자 등록</h3>
-            <p class="modal-desc" data-i18n="login.register_desc">새로운 관리자 계정을 생성합니다.</p>
+            <h3 class="modal-title" data-i18n="login.register_title">{{ messages.login_page.register_title }}</h3>
+            <p class="modal-desc" data-i18n="login.register_desc">{{ messages.login_page.register_desc }}</p>
 
             <!-- Registration Error Display -->
             <div id="registerError" class="alert alert-error"
@@ -142,34 +142,34 @@
             <form action="/register" method="POST" onsubmit="return handleRegister(event)">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                 <div class="form-group">
-                    <label data-i18n="login.label_userid">사용자 ID</label>
+                    <label data-i18n="login.label_userid">{{ messages.login_page.label_userid }}</label>
                     <input type="text" name="user_id" required data-i18n-placeholder="login.placeholder_userid"
                         placeholder="사번 또는 ID">
                 </div>
                 <div class="form-group">
-                    <label data-i18n="login.label_name">이름</label>
+                    <label data-i18n="login.label_name">{{ messages.login_page.label_name }}</label>
                     <input type="text" name="username" required data-i18n-placeholder="login.placeholder_username"
                         placeholder="이름">
                 </div>
                 <div class="form-group">
-                    <label data-i18n="login.label_email">이메일</label>
+                    <label data-i18n="login.label_email">{{ messages.login_page.label_email }}</label>
                     <input type="email" name="email" required data-i18n-placeholder="login.placeholder_email"
                         placeholder="이메일 주소">
                 </div>
                 <div class="form-group">
-                    <label data-i18n="login.label_password">비밀번호</label>
+                    <label data-i18n="login.label_password">{{ messages.login_page.label_password }}</label>
                     <input type="password" id="registerPassword" name="password" required
                         data-i18n-placeholder="login.placeholder_password" placeholder="비밀번호 설정">
                 </div>
                 <div class="form-group">
-                    <label data-i18n="login.label_password_confirm">비밀번호 확인</label>
+                    <label data-i18n="login.label_password_confirm">{{ messages.login_page.label_password_confirm }}</label>
                     <input type="password" id="registerConfirmPassword" name="confirm_password" required
                         data-i18n-placeholder="login.placeholder_password_confirm" placeholder="비밀번호 확인">
                 </div>
                 <div class="modal-actions">
-                    <button type="submit" class="btn-primary" data-i18n="login.btn_signup_submit">등록하기</button>
+                    <button type="submit" class="btn-primary" data-i18n="login.btn_signup_submit">{{ messages.login_page.btn_signup_submit }}</button>
                     <button type="button" onclick="toggleRegisterModal()" class="btn-cancel"
-                        data-i18n="login.btn_cancel">취소</button>
+                        data-i18n="login.btn_cancel">{{ messages.login_page.btn_cancel }}</button>
                 </div>
             </form>
         </div>

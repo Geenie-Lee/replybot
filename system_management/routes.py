@@ -299,8 +299,23 @@ def api_template_mask():
     return jsonify({'masked_text': masked_text})
 
 def get_template_path():
-    # Attempt to read config to find template path, or default to known location
-    # Note: Ideally this is read from loaded config object in web_server logic
+    # Attempt to read config to find template path
+    config_path = os.path.join(current_app.root_path, 'config', 'config.toml')
+    if os.path.exists(config_path):
+        try:
+            with open(config_path, 'rb') as f:
+                conf = tomllib.load(f)
+                files_conf = conf.get('files', {})
+                template_file = files_conf.get('templates')
+                if template_file:
+                    # If the path is relative, join with root_path
+                    if not os.path.isabs(template_file):
+                         return os.path.join(current_app.root_path, template_file)
+                    return template_file
+        except Exception as e:
+            print(f"Error reading config for templates: {e}")
+            
+    # Default fallback
     return os.path.join(current_app.root_path, 'model', 'wavve_reply_templates_132.json')
 
 @system_bp.route('/templates')
@@ -599,3 +614,234 @@ def api_export_templates():
             
     except Exception as e:
         return str(e), 500
+
+# --------------------------
+# Feedback Management Routes
+# --------------------------
+
+@system_bp.route('/feedback')
+def feedback_page():
+    # Load Messages and Config for Layout
+    messages = {}
+    if os.path.exists(os.path.join(current_app.root_path, 'config', 'messages.toml')):
+        with open(os.path.join(current_app.root_path, 'config', 'messages.toml'), 'rb') as f:
+             messages = tomllib.load(f)
+
+    server_config = {}
+    config_path = os.path.join(current_app.root_path, 'config', 'config.toml')
+    if os.path.exists(config_path):
+        with open(config_path, 'rb') as f:
+            server_config = tomllib.load(f)
+
+    current_lang = request.cookies.get('language', 'ko')
+    current_theme = request.cookies.get('theme', server_config.get('server', {}).get('theme', 'mono'))
+
+    return render_template('system/feedback_management.html',
+                           messages=messages.get(current_lang, {}),
+                           server_config=server_config,
+                           current_language=current_lang,
+                           current_theme=current_theme)
+
+@system_bp.route('/api/feedback/categories', methods=['GET'])
+def api_feedback_categories():
+    engine = get_db_engine()
+    if not engine:
+        return jsonify({'error': 'DB Configuration Error'}), 500
+    
+    conn = engine.connect()
+    try:
+        sql = text("""
+            SELECT DISTINCT predicted_template_id as feedback_category 
+            FROM replybot_logs 
+            WHERE predicted_template_id IS NOT NULL AND predicted_template_id != ''
+            ORDER BY CAST(predicted_template_id AS UNSIGNED) ASC
+        """)
+        result = conn.execute(sql).fetchall()
+        categories = [row[0] for row in result if row[0]]
+        return jsonify({'success': True, 'data': categories})
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+    finally:
+        conn.close()
+
+@system_bp.route('/api/feedback', methods=['GET'])
+def api_feedback_logs():
+    engine = get_db_engine()
+    if not engine:
+        return jsonify({'error': 'DB Configuration Error'}), 500
+    
+    conn = engine.connect()
+    try:
+        page = int(request.args.get('page', 1))
+        per_page = int(request.args.get('per_page', 20))
+        offset = (page - 1) * per_page
+        
+        keyword = request.args.get('keyword', '').strip()
+        has_feedback = request.args.get('has_feedback', 'all')
+        categories_str = request.args.get('categories', '')
+        categories_list = [c for c in categories_str.split(',') if c] if categories_str else []
+        start_date = request.args.get('start_date', '').strip()
+        end_date = request.args.get('end_date', '').strip()
+        manager_decision = request.args.get('manager_decision', 'all')
+        
+        where_clause = "WHERE 1=1"
+        params = {}
+        
+        if keyword:
+            where_clause += " AND query_text LIKE :kw"
+            params['kw'] = f"%{keyword}%"
+            
+        if has_feedback == 'yes':
+            where_clause += " AND (manual_category IS NOT NULL OR manual_answer IS NOT NULL)"
+        elif has_feedback == 'no':
+            where_clause += " AND manual_category IS NULL AND manual_answer IS NULL"
+
+        if categories_list:
+            in_placeholders = ', '.join([f':cat_{i}' for i in range(len(categories_list))])
+            where_clause += f" AND predicted_template_id IN ({in_placeholders})"
+            for i, cat in enumerate(categories_list):
+                params[f'cat_{i}'] = cat
+                
+        if start_date:
+            where_clause += " AND DATE(request_time) >= :start_date"
+            params['start_date'] = start_date
+            
+        if end_date:
+            where_clause += " AND DATE(request_time) <= :end_date"
+            params['end_date'] = end_date
+            
+        if manager_decision == 'pending':
+            where_clause += " AND (manager_decision IS NULL OR manager_decision = '') AND (manual_category IS NOT NULL OR manual_answer IS NOT NULL)"
+        elif manager_decision != 'all':
+            where_clause += " AND manager_decision = :m_dec"
+            params['m_dec'] = manager_decision
+
+        count_sql = text(f"SELECT COUNT(*) FROM replybot_logs {where_clause}")
+        total_count = conn.execute(count_sql, params).scalar()
+        
+        # User requested SQL equivalent
+        sql = text(f"""
+            SELECT id, 
+                   request_time, 
+                   query_text as question, 
+                   predicted_template_id as category_id, 
+                   client_ip as user_id, 
+                   user_id as actual_user_id, 
+                   rank1_id as no1_class_category_id, 
+                   rank2_id as no2_class_category_id, 
+                   rank3_id as no3_class_category_id, 
+                   manual_category as feedback_category, 
+                   manual_answer as feedback_answer,
+                   manager_id,
+                   confirm_date,
+                   manager_decision,
+                   manager_opinion
+            FROM replybot_logs
+            {where_clause}
+            ORDER BY request_time DESC
+            LIMIT :limit OFFSET :offset
+        """)
+        params['limit'] = per_page
+        params['offset'] = offset
+        
+        result = conn.execute(sql, params).mappings().all()
+        logs = [dict(row) for row in result]
+        
+        return jsonify({
+            'data': logs,
+            'total': total_count,
+            'page': page,
+            'per_page': per_page
+        })
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+    finally:
+        conn.close()
+
+@system_bp.route('/api/feedback/decision', methods=['POST'])
+def api_feedback_decision():
+    auth_manager = current_app.config.get('AUTH_MANAGER')
+    if not auth_manager:
+        return jsonify({'success': False, 'error': 'Auth System not initialized'}), 500
+    
+    # Get user who made the decision
+    token = request.cookies.get('session_token')
+    user_id = 'system'
+    if token and auth_manager:
+        sess = auth_manager.get_session(token)
+        if sess:
+            user_id = sess.get('user_id', 'system')
+
+    data = request.get_json()
+    if not data:
+        return jsonify({'success': False, 'error': 'No data provided'}), 400
+        
+    log_id = data.get('log_id')
+    decision_type = data.get('type')  # 'accept', 'reject', 'hold'
+    decision_note = data.get('note', '')
+    
+    if not log_id or not decision_type:
+        return jsonify({'success': False, 'error': 'Missing required fields'}), 400
+        
+    engine = get_db_engine()
+    if not engine:
+        return jsonify({'error': 'DB Configuration Error'}), 500
+        
+    conn = engine.connect()
+    try:
+        # Create feedback_decisions table if it doesn't exist
+        create_table_sql = text("""
+            CREATE TABLE IF NOT EXISTS feedback_decisions (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                log_id INT NOT NULL,
+                decision_type VARCHAR(20) NOT NULL,
+                decision_note TEXT,
+                decision_by VARCHAR(50),
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                INDEX (log_id)
+            )
+        """)
+        conn.execute(create_table_sql)
+        
+        # Insert the decision
+        insert_sql = text("""
+            INSERT INTO feedback_decisions (log_id, decision_type, decision_note, decision_by)
+            VALUES (:log_id, :type, :note, :user_id)
+        """)
+        conn.execute(insert_sql, {
+            'log_id': log_id,
+            'type': decision_type,
+            'note': decision_note,
+            'user_id': user_id
+        })
+        
+        # Update replybot_logs table with the manager's decision
+        update_logs_sql = text("""
+            UPDATE replybot_logs
+            SET manager_id = :user_id,
+                confirm_date = CURRENT_TIMESTAMP(),
+                manager_decision = :type,
+                manager_opinion = :note
+            WHERE id = :log_id
+        """)
+        conn.execute(update_logs_sql, {
+            'log_id': log_id,
+            'type': decision_type,
+            'note': decision_note,
+            'user_id': user_id
+        })
+        
+        conn.commit()
+        return jsonify({'success': True, 'message': 'Decision saved successfully'})
+        
+    except Exception as e:
+        conn.rollback()
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)}), 500
+    finally:
+        conn.close()

@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
-    <title>템플릿 관리</title>
+    <title>{{ messages.templates_mgr.title_templates }}</title>
     <!-- Use dashboard layout links to ensure consistency -->
     <link rel="stylesheet" href="{{ url_for('dashboard.static', filename='vendor/css/inter.css') }}">
     <link rel="stylesheet" href="{{ url_for('dashboard.static', filename='vendor/css/fontawesome.all.min.css') }}">
@@ -22,9 +22,18 @@
             position: relative;
         }
 
+        .split-content {
+            display: flex;
+            flex-direction: row;
+            flex: 1;
+            overflow: hidden;
+            padding-bottom: 1rem;
+        }
+
         .grid-area {
+            flex: 0 0 50%;
+            margin: 0 0 0 1rem;
             background: var(--card-bg);
-            /* flex: 0 0 40% handled inline or by JS */
             display: flex;
             flex-direction: column;
             overflow: hidden;
@@ -34,7 +43,7 @@
 
         .resize-handle {
             width: 8px;
-            height: 100%;
+            height: auto;
             background: var(--bg-main);
             cursor: col-resize;
             display: flex;
@@ -56,6 +65,8 @@
         }
 
         .tab-area {
+            flex: 1;
+            margin: 0 1rem 0 0;
             background: var(--card-bg);
             display: flex;
             flex-direction: column;
@@ -210,7 +221,12 @@
 <body>
     <div class="dashboard-container">
         <!-- Sidebar -->
-        <aside class="sidebar collapsed">
+        <aside class="sidebar" id="mainSidebar" style="transition: none !important;">
+            <script>
+                if (localStorage.getItem('sidebar_collapsed') === 'true' || localStorage.getItem('sidebar_collapsed') === null) {
+                    document.getElementById('mainSidebar').classList.add('collapsed');
+                }
+            </script>
             <div class="logo">
                 <div style="display:flex; align-items:center; gap:0.75rem; overflow:hidden;">
                     <i class="fas fa-robot" style="font-size: 1.5rem;"></i>
@@ -240,6 +256,10 @@
                             <i class="fas fa-file-alt"></i>
                             <span>{{ messages.dashboard.nav_templates }}</span>
                         </a>
+                        <a href="/system/feedback">
+                            <i class="fas fa-comments"></i>
+                            <span>{{ messages.dashboard.nav_feedback }}</span>
+                        </a>
                     </div>
                 </div>
             </nav>
@@ -249,7 +269,7 @@
             <header class="top-bar"
                 style="justify-content: space-between; padding: 1rem 1.5rem; margin-bottom:0; background:var(--bg-main); flex-shrink:0;">
                 <div style="display:flex; align-items:center; gap:1rem;">
-                    <h2 style="font-size:1.2rem; font-weight:700;">템플릿 관리</h2>
+                    <h2 style="font-size:1.2rem; font-weight:700;">{{ messages.templates_mgr.title_templates }}</h2>
                 </div>
                 <div style="display: flex; align-items: center; gap: 0.5rem;">
                     <div
@@ -260,7 +280,7 @@
                             style="background:var(--bg-secondary); color:var(--text-secondary); border-radius:0; border:none;">Excel</button>
                     </div>
                     <button onclick="openEditModal()" id="btnEdit" class="btn btn-secondary" disabled>
-                        <i class="fas fa-edit"></i> 답변 수정
+                        <i class="fas fa-edit"></i> {{ messages.templates_mgr.btn_edit_ans }}
                     </button>
                 </div>
             </header>
@@ -268,9 +288,10 @@
             <div class="layout-container" id="layoutContainer">
                 <!-- 1. Filter Area (Top) -->
                 <div class="card filter-area"
-                    style="background: var(--bg-card); padding: 1rem; margin: 0 1rem 1rem 1rem; border:1px solid var(--border-color); border-radius:6px; display:flex; gap:1rem; align-items:flex-end; flex-wrap:wrap; flex-shrink: 0;">
+                    style="background: var(--card-bg); padding: 1rem; margin: 0 1rem 1rem 1rem; border:1px solid var(--border-color); border-radius:6px; display:flex; gap:1rem; align-items:flex-end; flex-wrap:wrap; flex-shrink: 0;">
                     <div style="display:flex; flex-direction:column; gap:0.25rem;">
-                        <label style="font-size:0.8rem; font-weight:600; color:var(--text-secondary);">카테고리</label>
+                        <label style="font-size:0.8rem; font-weight:600; color:var(--text-secondary);">{{
+                            messages.templates_mgr.lbl_category }}</label>
                         <select id="searchCategory"
                             style="padding:0.4rem; border:1px solid var(--border-color); border-radius:4px; font-size:0.9rem; min-width:200px; background:var(--bg-secondary); color:var(--text-primary);">
                             <option value="">전체</option>
@@ -281,28 +302,29 @@
                     </div>
 
                     <div style="display:flex; flex-direction:column; gap:0.25rem; flex:1;">
-                        <label style="font-size:0.8rem; font-weight:600; color:var(--text-secondary);">답변 템플릿</label>
+                        <label style="font-size:0.8rem; font-weight:600; color:var(--text-secondary);">{{
+                            messages.templates_mgr.lbl_ans_template }}</label>
                         <input type="text" id="searchKeyword" onkeypress="if(event.key==='Enter') loadTemplates()"
-                            placeholder="검색어를 입력하세요..."
-                            style="padding:0.4rem; border:1px solid var(--border-color); border-radius:4px; font-size:0.9rem; width:100%; background:var(--bg-input); color:var(--text-primary);">
+                            placeholder="{{ messages.templates_mgr.ph_search_default }}"
+                            style="padding:0.4rem; border:1px solid var(--border-color); border-radius:4px; font-size:0.9rem; width:100%; background:var(--input-bg); color:var(--text-primary);">
                     </div>
 
                     <button onclick="loadTemplates()" class="btn btn-primary">
-                        <i class="fas fa-search"></i> 검색
+                        <i class="fas fa-search"></i> {{ messages.templates_mgr.btn_search }}
                     </button>
                 </div>
 
                 <!-- 2. Split Content (Bottom) -->
-                <div class="split-content" style="display:flex; flex:1; overflow:hidden; padding-bottom:1rem;">
-                    <!-- List Area (Left 40%) -->
-                    <div class="grid-area" id="gridArea" style="flex: 0 0 40%; margin: 0 0 0 1rem;">
+                <div class="split-content">
+                    <div class="grid-area" id="gridArea">
                         <div style="overflow-y: auto; flex:1;">
                             <table class="logs-table" style="width:100%; border-collapse: collapse;">
                                 <thead
-                                    style="position:sticky; top:0; background:var(--bg-card); z-index:10; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+                                    style="position:sticky; top:0; background:var(--card-bg); z-index:10; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
                                     <tr>
                                         <th style="width: 60px;">ID</th>
-                                        <th>카테고리</th>
+                                        <th>{{ messages.templates_mgr.col_category }} <span id="categoryCount"></span>
+                                        </th>
                                         <th style="width: 80px;">변경횟수</th>
                                     </tr>
                                 </thead>
@@ -313,20 +335,20 @@
                         </div>
                     </div>
 
-                    <!-- Resizer (Vertical) -->
+                    <!-- Resizer (Horizontal) -->
                     <div class="resize-handle" id="resizer"></div>
 
-                    <div class="tab-area" id="detailArea"
-                        style="flex:1; margin: 0 1rem 0 0; display:flex; flex-direction:column; padding:0;">
+                    <!-- 3. Detail Area (Bottom) -->
+                    <div class="tab-area" id="detailArea" style="padding:0;">
                         <!-- Tabs Header -->
                         <div
                             style="display:flex; border-bottom:1px solid var(--border-color); background:var(--bg-secondary);">
                             <button class="tab-btn active" onclick="switchTab('info')" id="tab-btn-info"
                                 style="padding:0.8rem 1.5rem; border:none; background:transparent; font-weight:600; cursor:pointer; border-bottom:2px solid var(--primary-accent); color:var(--text-primary);">기본
-                                정보</button>
+                                {{ messages.templates_mgr.btn_info }}</button>
                             <button class="tab-btn" onclick="switchTab('history')" id="tab-btn-history"
                                 style="padding:0.8rem 1.5rem; border:none; background:transparent; font-weight:600; cursor:pointer; color:var(--text-secondary);">변경
-                                이력</button>
+                                {{ messages.templates_mgr.btn_history }}</button>
                         </div>
 
                         <!-- Tab Content: Info -->
@@ -334,7 +356,7 @@
                             style="display:flex; flex-direction:column; gap:1rem; padding:1rem; flex:1; overflow-y:auto;">
                             <p id="info-placeholder"
                                 style="text-align:center; color: var(--text-secondary); margin-top:2rem; font-size:0.9rem;">
-                                목록에서 템플릿을 선택하세요.
+                                {{ messages.templates_mgr.msg_select_template }}
                             </p>
                             <div id="info-details" style="display:none; flex-direction:column; gap:1rem; height:100%;">
                                 <!-- Content injected via JS -->
@@ -348,19 +370,21 @@
                             <div style="flex: 0 0 40%; border-bottom:1px solid var(--border-color); overflow-y:auto;">
                                 <table class="logs-table"
                                     style="width:100%; border-collapse: collapse; font-size:0.85rem;">
-                                    <thead style="position:sticky; top:0; background:var(--bg-card); z-index:5;">
+                                    <thead style="position:sticky; top:0; background:var(--card-bg); z-index:5;">
                                         <tr>
-                                            <th style="padding:0.5rem; width:180px;">일자</th>
+                                            <th style="padding:0.5rem; width:180px;">{{ messages.templates_mgr.col_date
+                                                }}</th>
                                             <th style="padding:0.5rem; width:80px;">ID</th>
                                             <th style="padding:0.5rem;">카테고리</th>
-                                            <th style="padding:0.5rem; width:100px;">변경자</th>
+                                            <th style="padding:0.5rem; width:100px;">{{
+                                                messages.templates_mgr.col_changer }}</th>
                                         </tr>
                                     </thead>
                                     <tbody id="historyTableBody">
                                         <tr>
                                             <td colspan="4"
                                                 style="padding:1rem; text-align:center; color:var(--text-secondary);">
-                                                데이터 없음</td>
+                                                {{ messages.templates_mgr.msg_no_data_short }}</td>
                                         </tr>
                                     </tbody>
                                 </table>
@@ -372,14 +396,16 @@
                                 <div style="display:flex; gap:1rem; height:100%;">
                                     <div style="flex:1; display:flex; flex-direction:column; gap:0.25rem;">
                                         <label
-                                            style="font-size:0.8rem; font-weight:700; color:var(--text-secondary);">변경 전
+                                            style="font-size:0.8rem; font-weight:700; color:var(--text-secondary);">{{
+                                            messages.templates_mgr.lbl_before_change }}
                                             (AS-IS)</label>
                                         <textarea id="diff-asis" readonly
                                             style="flex:1; padding:0.5rem; border:1px solid var(--border-color); border-radius:4px; resize:none; font-size:0.85rem; background:var(--card-bg); color:var(--text-primary);"></textarea>
                                     </div>
                                     <div style="flex:1; display:flex; flex-direction:column; gap:0.25rem;">
                                         <label
-                                            style="font-size:0.8rem; font-weight:700; color:var(--primary-accent);">변경 후
+                                            style="font-size:0.8rem; font-weight:700; color:var(--primary-accent);">{{
+                                            messages.templates_mgr.lbl_after_change }}
                                             (TO-BE)</label>
                                         <textarea id="diff-tobe" readonly
                                             style="flex:1; padding:0.5rem; border:1px solid var(--border-color); border-radius:4px; resize:none; font-size:0.85rem; background:var(--card-bg); color:var(--text-primary);"></textarea>
@@ -396,17 +422,17 @@
     <!-- Edit Template Modal -->
     <div id="editTemplateModal" class="modal-overlay" onclick="closeModal('editTemplateModal')">
         <div class="modal-content" onclick="event.stopPropagation()">
-            <div class="modal-header">답변 수정</div>
+            <div class="modal-header">{{ messages.templates_mgr.modal_edit_ans }}</div>
             <form onsubmit="updateTemplate(event)">
                 <input type="hidden" id="edit_id">
                 <div class="form-group">
-                    <label class="form-label">카테고리</label>
+                    <label class="form-label">{{ messages.templates_mgr.lbl_category }}</label>
                     <input type="text" id="edit_category" class="form-input" disabled
                         style="background:var(--bg-secondary);">
                 </div>
                 <div class="form-group">
                     <label class="form-label" style="display:flex; justify-content:space-between; align-items:center;">
-                        답변 내용
+                        {{ messages.templates_mgr.lbl_ans_content }}
                         <button type="button" id="btn-masking" class="btn btn-secondary"
                             style="font-size:0.75rem; padding:0.2rem 0.5rem; display:none;"
                             onclick="toggleMasking()">Masking
@@ -415,8 +441,9 @@
                     <textarea id="edit_answer" class="form-textarea" required></textarea>
                 </div>
                 <div class="btn-group">
-                    <button type="button" class="btn btn-cancel" onclick="closeModal('editTemplateModal')">취소</button>
-                    <button type="submit" class="btn btn-primary">저장</button>
+                    <button type="button" class="btn btn-cancel" onclick="closeModal('editTemplateModal')">{{
+                        messages.templates_mgr.btn_cancel }}</button>
+                    <button type="submit" class="btn btn-primary">{{ messages.templates_mgr.btn_save }}</button>
                 </div>
             </form>
         </div>
@@ -426,7 +453,7 @@
     <script>
         // Use logic similar to users.html for interaction
 
-        let allTemplates = {{ templates | tojson }};
+        let allTemplates = {{ templates | tojson | safe }};
         let currentTemplates = [...allTemplates];
         let selectedTemplateId = null;
 
@@ -443,29 +470,26 @@
                 e.preventDefault();
                 document.body.style.cursor = 'col-resize';
                 document.body.style.userSelect = 'none';
-                // Container is the valid split-content area
-                containerRect = gridArea.parentElement.getBoundingClientRect();
+                containerRect = document.querySelector('.split-content').getBoundingClientRect();
             });
 
             document.addEventListener('mousemove', (e) => {
                 if (!isResizing || !containerRect) return;
 
-                // Calculate width. 
-                // e.clientX is absolute. containerRect.left is start.
-                let newWidth = e.clientX - containerRect.left - 16; // -16 for left margin if any
+                requestAnimationFrame(() => {
+                    const gridRect = gridArea.getBoundingClientRect();
+                    let newGridWidth = e.clientX - gridRect.left;
 
-                // Adjust for margin: The grid has margin-left: 1rem (16px)
-                // simpler: offset relative to container left
+                    // Constraints
+                    const minWidth = 400;
+                    const maxWidth = containerRect.width - 300;
 
-                // Constraints
-                const minWidth = 300;
-                const maxWidth = containerRect.width - 400; // Keep at least 400px for detail
+                    if (newGridWidth < minWidth) newGridWidth = minWidth;
+                    if (newGridWidth > maxWidth) newGridWidth = maxWidth;
 
-                if (newWidth < minWidth) newWidth = minWidth;
-                if (newWidth > maxWidth) newWidth = maxWidth;
-
-                gridArea.style.flex = 'none';
-                gridArea.style.width = newWidth + 'px';
+                    gridArea.style.flex = 'none';
+                    gridArea.style.width = newGridWidth + 'px';
+                });
             });
 
             document.addEventListener('mouseup', () => {
@@ -476,7 +500,7 @@
                 }
             });
             resizer.addEventListener('dblclick', () => {
-                gridArea.style.flex = '0 0 40%';
+                gridArea.style.flex = '0 0 50%';
                 gridArea.style.width = 'auto';
             });
         }
@@ -519,6 +543,13 @@
         }
 
         function renderTable(data) {
+            const label = document.getElementById('categoryCount');
+            if (label) {
+                label.innerText = `(${data.length})`;
+                label.style.fontWeight = 'normal';
+                label.style.marginLeft = '4px';
+            }
+
             const tbody = document.getElementById('templatesTableBody');
             tbody.innerHTML = '';
 
@@ -578,8 +609,8 @@
             if (t) {
                 const html = `
                     <div class="detail-row"><span class="detail-label">ID</span><div class="detail-value" style="min-height:auto;">${t.id}</div></div>
-                    <div class="detail-row"><span class="detail-label">카테고리</span><div class="detail-value" style="min-height:auto;">${t.inquiry_category}</div></div>
-                    <div class="detail-row" style="flex:1;"><span class="detail-label">답변 템플릿</span><div class="detail-value" style="height:100%; overflow-y:auto; min-height:300px;">${t.general_template || ''}</div></div>
+                    <div class="detail-row"><span class="detail-label">{{ messages.templates_mgr.lbl_category }}</span><div class="detail-value" style="min-height:auto;">${t.inquiry_category}</div></div>
+                    <div class="detail-row" style="flex:1;"><span class="detail-label">{{ messages.templates_mgr.lbl_ans_template }}</span><div class="detail-value" style="height:100%; overflow-y:auto; min-height:300px;">${t.general_template || ''}</div></div>
                 `;
                 const infoDetails = document.getElementById('info-details');
                 const infoPlaceholder = document.getElementById('info-placeholder');
@@ -645,7 +676,7 @@
             } catch (err) {
                 console.error(err);
                 const tbody = document.getElementById('historyTableBody');
-                if (tbody) tbody.innerHTML = `<tr><td colspan="4" style="padding:1rem;">오류 발생</td></tr>`;
+                if (tbody) tbody.innerHTML = `<tr><td colspan="4" style="padding:1rem;">{{ messages.templates_mgr.msg_no_data_short }}</td></tr>`;
             }
         }
 
@@ -758,7 +789,7 @@
                         updateMaskingButtonUI();
                     }
                 } catch (err) {
-                    alert('Masking 처리 중 오류가 발생했습니다: ' + err);
+                    alert('{{ messages.templates_mgr.msg_masking_err }}' + err);
                 }
             } else {
                 // Turn OFF
@@ -800,14 +831,14 @@
                 const result = await res.json();
 
                 if (result.success) {
-                    alert('저장되었습니다.');
+                    alert('{{ messages.templates_mgr.msg_saved }}');
                     localStorage.setItem('lastSelectedTemplateId', id);
                     location.reload();
                 } else {
-                    alert('오류 발생: ' + result.error);
+                    alert('{{ messages.templates_mgr.msg_err }}' + result.error);
                 }
             } catch (err) {
-                alert('통신 오류: ' + err);
+                alert('{{ messages.templates_mgr.msg_comm_err }}' + err);
             }
         }
 
