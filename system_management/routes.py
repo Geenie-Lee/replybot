@@ -1,7 +1,17 @@
 import os
 from flask import render_template, request, jsonify, current_app
 from sqlalchemy import create_engine, text
+from datetime import datetime, date
 from . import system_bp
+
+def _format_datetimes(d):
+    """Helper to convert datetime objects to string to prevent GMT offset conversions by JS"""
+    for k, v in d.items():
+        if isinstance(v, datetime):
+            d[k] = v.strftime('%Y-%m-%d %H:%M:%S')
+        elif isinstance(v, date):
+            d[k] = v.strftime('%Y-%m-%d')
+    return d
 
 try:
     import tomllib
@@ -135,7 +145,7 @@ def api_users_list():
         # Convert to dict and handle datetime serialization if needed (Flask jsonify handles some, but be careful)
         users_list = []
         for row in result:
-            u = dict(row)
+            u = _format_datetimes(dict(row))
             users_list.append(u)
         
         return jsonify({
@@ -209,7 +219,7 @@ def api_user_detail(user_id):
         sql = text("SELECT id, username, email, created_at, last_login_at, is_locked, failed_login_count, locked_until FROM users WHERE id = :uid")
         result = conn.execute(sql, {'uid': user_id}).mappings().first()
         if result:
-            return jsonify(dict(result))
+            return jsonify(_format_datetimes(dict(result)))
         else:
             return jsonify({'error': 'User not found'}), 404
     except Exception as e:
@@ -242,7 +252,7 @@ def api_user_logs(user_id):
         """)
         
         result = conn.execute(sql, {'uid': user_id, 'limit': per_page, 'offset': offset}).mappings().all()
-        logs = [dict(row) for row in result]
+        logs = [_format_datetimes(dict(row)) for row in result]
         
         return jsonify({
             'data': logs,
@@ -508,7 +518,7 @@ def api_template_logs(template_id):
             ORDER BY log_time DESC
         """)
         result = conn.execute(sql, {'cid': template_id}).mappings().all()
-        logs = [dict(r) for r in result]
+        logs = [_format_datetimes(dict(r)) for r in result]
         conn.close()
         return jsonify(logs)
     except Exception as e:
@@ -747,7 +757,7 @@ def api_feedback_logs():
         params['offset'] = offset
         
         result = conn.execute(sql, params).mappings().all()
-        logs = [dict(row) for row in result]
+        logs = [_format_datetimes(dict(row)) for row in result]
         
         return jsonify({
             'data': logs,
