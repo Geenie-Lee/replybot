@@ -229,8 +229,9 @@
             </script>
             <div class="logo">
                 <div style="display:flex; align-items:center; gap:0.75rem; overflow:hidden;">
-                    <i class="fas fa-robot" style="font-size: 1.5rem;"></i>
-                    <span style="white-space: pre-line; font-size: 1.5rem; line-height: 1.2; font-weight: 700;">{{
+                    <i class="fas fa-robot" style="font-size: 1.25rem;"></i>
+                    <span
+                        style="white-space: pre-line; word-break: keep-all; font-size: 1rem; line-height: 1.2; font-weight: 700;">{{
                         messages.dashboard.admin_title }}</span>
                 </div>
                 <i class="fas fa-chevron-left" id="sidebarToggle"
@@ -608,8 +609,7 @@
             const t = allTemplates.find(x => x.id === id);
             if (t) {
                 const html = `
-                    <div class="detail-row"><span class="detail-label">ID</span><div class="detail-value" style="min-height:auto;">${t.id}</div></div>
-                    <div class="detail-row"><span class="detail-label">{{ messages.templates_mgr.lbl_category }}</span><div class="detail-value" style="min-height:auto;">${t.inquiry_category}</div></div>
+                    <div class="detail-row"><span class="detail-label">{{ messages.templates_mgr.lbl_category }}</span><div class="detail-value" style="font-size: 0.9rem; font-weight: bold; min-height:auto;">[${t.id}] ${t.inquiry_category}</div></div>
                     <div class="detail-row" style="flex:1;"><span class="detail-label">{{ messages.templates_mgr.lbl_ans_template }}</span><div class="detail-value" style="height:100%; overflow-y:auto; min-height:300px;">${t.general_template || ''}</div></div>
                 `;
                 const infoDetails = document.getElementById('info-details');

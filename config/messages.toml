@@ -95,7 +95,7 @@ label_new_password = "새 비밀번호"
 btn_reset_submit = "변경하기"
 
 [ko.dashboard]
-admin_title = "리플라이봇\n관리자"
+admin_title = "AI 리플라이봇\n관리자"
 nav_dashboard = "대시보드"
 nav_main = "메인 사이트"
 overview_title = "서비스 개요"
@@ -359,7 +359,7 @@ label_new_password = "New Password"
 btn_reset_submit = "Reset Password"
 
 [en.dashboard]
-admin_title = "ReplyBot\nAdmin"
+admin_title = "AI ReplyBot\nAdmin"
 nav_dashboard = "Dashboard"
 nav_main = "Main Site"
 overview_title = "Service Overview"
