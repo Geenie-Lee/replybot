@@ -49,6 +49,20 @@ class SecurityMiddleware:
 
         g.user_id = session_data.get('user_id')
         g.token = token
+        
+        # Role Base Access Control Check
+        user_info = self.auth_manager._get_user_info(g.user_id)
+        group_id = user_info.get('group_id', 2) if user_info else 2
+        
+        if path.startswith('/system') and group_id != 1:
+            if request.is_json:
+                return abort(403, description="Access Denied: Admin role required")
+            return redirect('/')
+            
+        if path.startswith('/dashboard') and group_id == 2:
+            if request.is_json:
+                return abort(403, description="Access Denied: Dashboard is disabled for Agents")
+            return redirect('/')
 
     def process_response(self, response: Response):
         """응답 후처리: 보안 헤더"""

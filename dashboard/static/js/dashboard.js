@@ -821,7 +821,7 @@ function renderCharts(stats, templateMap) {
                     data: stats.user_stats.map(u => u.count),
                     backgroundColor: theme.barBg,
                     borderColor: theme.barBorder,
-                    borderWidth: 2
+                    borderWidth: 0
                 }]
             },
             plugins: [{
@@ -950,7 +950,12 @@ function renderCharts(stats, templateMap) {
         `;
 
         // 5. Build HTML
-        let html = `<table style="${tableStyle}"><thead><tr><th style="${thStyle}; left:0; z-index:20; width:30%;">템플릿 \\ User</th>`;
+        const diagBg = `linear-gradient(to top right, ${theme.heatmap.headerBg} 49%, ${theme.heatmap.border} 49%, ${theme.heatmap.border} 51%, ${theme.heatmap.headerBg} 51%)`;
+        let html = `<table style="${tableStyle}"><thead><tr>
+            <th style="${thStyle}; left:0; z-index:20; width:30%; padding:0; background: ${diagBg}; position: relative; min-width: 120px;">
+                <div style="position: absolute; top: 4px; right: 8px; font-size: 0.8rem;">User</div>
+                <div style="position: absolute; bottom: 4px; left: 8px; font-size: 0.8rem;">템플릿</div>
+            </th>`;
         topUsers.forEach(u => {
             html += `<th style="${thStyle}">${u}</th>`;
         });

@@ -14,7 +14,7 @@
 <body>
     <div class="login-card">
         <!-- Theme & Language -->
-        <select id="langSelect" onchange="changeLanguage(this.value)" class="lang-select">
+        <select id="langSelect" onchange="changeLanguage(this.value)" class="lang-select" style="display: none;">
             <option value="ko" selected>KO</option>
             <option value="en">EN</option>
         </select>
@@ -183,11 +183,12 @@
     <script src="{{ url_for('static', filename='js/login.js') }}?v=2"></script>
     <script>
         window.onload = function () {
-            // Check stored lang or default to 'ko'
-            const storedLang = localStorage.getItem('replybot_lang') || 'ko';
+            // 언어는 KO(한국어)로 고정
+            const fixedLang = 'ko';
+            localStorage.setItem('replybot_lang', fixedLang);
             const langSelect = document.getElementById('langSelect');
-            if (langSelect) langSelect.value = storedLang;
-            changeLanguage(storedLang);
+            if (langSelect) langSelect.value = fixedLang;
+            changeLanguage(fixedLang);
 
             // Flask Flash Message for Registration (Auto open if error/flag)
             {% if show_register %}

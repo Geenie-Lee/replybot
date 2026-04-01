@@ -27,7 +27,7 @@ const UI = {
     openModal(templateId) {
         const template = allTemplates.find(t => t.id == templateId);
         if (!template) return;
-        document.getElementById('modalTitle').innerText = [];
+        document.getElementById('modalTitle').innerText = `[${template.id}] ${template.title || template.category}`;
         document.getElementById('modalCategory').innerText = template.category;
         document.getElementById('modalBody').innerText = template.full_content || template.template_text;
         const overlay = document.getElementById('modalOverlay');

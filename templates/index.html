@@ -76,7 +76,7 @@
                             <span style="font-size:0.6rem; margin-top:2px; line-height:1;">logout</span>
                         </a>
                     </div>
-                    {% if current_user and current_user.admin_yn == 'Y' %}
+                    {% if current_user and current_user.group_id in (1, 3) %}
                     <a href="/dashboard"
                         style="display:inline-block; width:100%; text-align:center; box-sizing:border-box; background: linear-gradient(90deg, #1e293b, #334155); color:white; padding:4px 0; border-radius:4px; font-size:0.8rem; text-decoration:none; font-weight:600; box-shadow:0 1px 2px rgba(0,0,0,0.1); transition: opacity 0.2s;"
                         onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">
@@ -93,8 +93,11 @@
                 <div class="input-group">
                     <div
                         style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-                        <label for="queryInput" data-i18n="form.query_label" style="margin-bottom: 0;">{{
-                            messages.form.query_label }}</label>
+                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                            <label for="queryInput" data-i18n="form.query_label" style="margin-bottom: 0;">{{
+                                messages.form.query_label }}</label>
+                            <span id="queryMinLengthHint" style="font-size: 0.78rem; color: #94a3b8; font-weight: 400;">(10글자 이상 입력)</span>
+                        </div>
                         <button
                             onclick="document.getElementById('queryInput').value=''; document.getElementById('queryCharCount').innerText='0 / 300'; document.getElementById('queryInput').focus();"
                             style="background: none; border: none; color: #64748b; font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; gap: 4px; padding: 0; transition: color 0.2s;"
@@ -138,9 +141,9 @@
                 <div
                     style="display: flex; justify-content: space-between; align-items: flex-start; margin-right: 1.5rem;">
                     <div>
-                        <div class="modal-title" id="modalTitle">{{ messages.modal.title_default }}</div>
-                        <span id="modalCategory" class="template-tag"
-                            style="margin-top: 0.5rem; display: inline-block;">-</span>
+                        <div class="template-title" id="modalTitle" style="font-weight: bold;">{{
+                            messages.modal.title_default }}</div>
+                        <span id="modalCategory" style="display: none;">-</span>
                     </div>
                     <button class="copy-btn" onclick="UI.copyText('modalBody')"
                         style="display: inline-flex; font-size: 0.85rem; padding: 0.6rem 1rem; border-radius: 8px; background: var(--bg-secondary); border: 1px solid var(--card-border); color: var(--text-secondary); transition: all 0.2s;">

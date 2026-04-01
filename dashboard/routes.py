@@ -84,7 +84,7 @@ def index():
         except:
             pass
             
-    return render_template('dashboard.html', all_messages=all_messages, current_theme=current_theme)
+    return render_template('dashboard.html', all_messages=all_messages, current_theme=current_theme, current_user=user_info)
 
 @dashboard_bp.route('/api/stats')
 def get_stats():

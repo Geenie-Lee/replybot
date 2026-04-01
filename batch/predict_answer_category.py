@@ -11,8 +11,8 @@ os.environ["OMP_NUM_THREADS"] = "1"
 
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 MODEL_FILE = os.path.join(BASE_DIR, "model", "randomforest_model.pkl")
-INPUT_TSV = os.path.join(BASE_DIR, "model", "categoryid_question_260304.tsv")
-OUTPUT_TSV = os.path.join(BASE_DIR, "model", "categoryid_question_260304.tsv") # Save over the same file or make a new one? The prompt says "추가해서... 추가해줘." We will overwrite it.
+INPUT_TSV = os.path.join(BASE_DIR, "model", "category_question_260325.tsv")
+OUTPUT_TSV = os.path.join(BASE_DIR, "model", "category_question_260325.tsv") # Save over the same file or make a new one? The prompt says "추가해서... 추가해줘." We will overwrite it.
 
 def extract_morphological_keywords(text: str, kiwi_analyzer) -> list:
     if not text:
@@ -183,5 +183,46 @@ def main():
         print("Error occurred:")
         traceback.print_exc()
 
+def predict_single_query(query: str):
+    """단일 질의를 받아 모델에서 리턴하는 카테고리 1, 2, 3위를 보여주는 함수 (단위 테스트용)"""
+    import numpy as np
+    import sklearn
+    from sklearn.ensemble import RandomForestClassifier
+    from kiwipiepy import Kiwi
+    
+    print("Loading Kiwi...")
+    kiwi_analyzer = Kiwi()
+
+    print(f"Loading randomforest_model from {MODEL_FILE}...")
+    with open(MODEL_FILE, 'rb') as f:
+        randomforest_classifier = pickle.load(f)
+        
+    vectorizer = randomforest_classifier['vectorizer']
+    model = randomforest_classifier['model']
+    
+    print(f"Analyzing query: '{query}'")
+    keywords = extract_morphological_keywords(query, kiwi_analyzer)
+    text_ready = ' '.join(keywords) if keywords else ""
+    
+    X_tfidf = vectorizer.transform([text_ready])
+    
+    probabilities = model.predict_proba(X_tfidf)[0]
+    model_classes = model.classes_
+    
+    # 확률 내림차순 정렬 후 상위 3개 인덱스 추출
+    top_3_indices = np.argsort(probabilities)[::-1][:3]
+    
+    print("\n[ 예측 결과 Top 3 ]")
+    for i, idx in enumerate(top_3_indices):
+        category_id = model_classes[idx]
+        prob = probabilities[idx] * 100
+        print(f"{i+1}위: 카테고리 {category_id} (확률: {prob:.2f}%)")
+        
+    return [(model_classes[idx], probabilities[idx]) for idx in top_3_indices]
+
 if __name__ == '__main__':
-    main()
+    if len(sys.argv) > 1 and sys.argv[1] == '--test':
+        test_query = "스마트폰에서 웨이브 이용 가능한가요?" if len(sys.argv) == 2 else sys.argv[2]
+        predict_single_query(test_query)
+    else:
+        main()

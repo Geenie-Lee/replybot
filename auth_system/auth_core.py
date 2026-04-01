@@ -41,7 +41,7 @@ class AuthManager:
     # 1. 사용자 관리 (회원가입, 조회)
     # ------------------------------------------------------------------
 
-    def create_user(self, user_id: str, username: str, password: str, email: str) -> bool:
+    def create_user(self, user_id: str, username: str, password: str, email: str, group_id: int = 2) -> bool:
         """새 사용자를 생성합니다."""
         db = self._get_db()
         try:
@@ -52,14 +52,15 @@ class AuthManager:
                 pw_hash = password # 보안 취약 (데모용)
             
             sql = text("""
-                INSERT INTO users (id, username, email, password_hash)
-                VALUES (:id, :username, :email, :hash)
+                INSERT INTO users (id, username, email, password_hash, group_id)
+                VALUES (:id, :username, :email, :hash, :group_id)
             """)
             db.execute(sql, {
                 "id": user_id,
                 "username": username,
                 "email": email,
-                "hash": pw_hash
+                "hash": pw_hash,
+                "group_id": group_id
             })
             db.commit()
             return True

@@ -82,6 +82,11 @@ async function findTemplate() {
 
     const query = queryEl.value.trim();
     if (!query) return alert(T('result.empty_query'));
+    if (query.length < 10) {
+        alert('문의내용을 10글자 이상 입력해주세요.\n현재 ' + query.length + '글자 입력되었습니다.');
+        queryEl.focus();
+        return;
+    }
 
     const resultDiv = document.getElementById('searchResult');
     if (resultDiv) {
@@ -238,13 +243,22 @@ function checkFeedbackLength(el) {
 
 function checkQueryLength(el) {
     const maxLength = 300;
+    const minLength = 10;
     let val = el.value;
     if (val.length > maxLength) {
         val = val.substring(0, maxLength);
         el.value = val;
     }
     const countEl = document.getElementById('queryCharCount');
-    if (countEl) countEl.innerText = `${val.length} / ${maxLength}`;
+    if (countEl) {
+        countEl.innerText = `${val.length} / ${maxLength}`;
+        // 10글자 미만이면 빨간색 경고, 이상이면 기본색 복원
+        countEl.style.color = val.length < minLength ? '#ef4444' : '#94a3b8';
+    }
+    const hintEl = document.getElementById('queryMinLengthHint');
+    if (hintEl) {
+        hintEl.style.color = val.length > 0 && val.length < minLength ? '#ef4444' : '#94a3b8';
+    }
 }
 
 window.onload = function () {

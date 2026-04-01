@@ -292,40 +292,76 @@ HTML_TEMPLATE = """
                         <tr onclick="fillAndSubmit('더블 이용권 구매 어떻게 하나요?')">
                             <td style="width: 30%;">[1] 이용권 구매 방법</td>
                             <td style="width: 70%;">더블 이용권 구매 어떻게 하나요?</td>
-                            </tr>
-                            <tr onclick="fillAndSubmit('티빙, 웨이브 한꺼번에 있는 거로 이용권 변경 어떻게 해요?')">
-                                <td>[14] 이용권 변경</td>
-                                <td>티빙, 웨이브 한꺼번에 있는 거로 이용권 변경 어떻게 해요?</td>
-                            </tr>
-                            <tr onclick="fillAndSubmit('결제 변경하고 싶어요')">
-                                <td>[15] 결제 수단 변경 방법</td>
-                                <td>결제 변경하고 싶어요</td>
-                            </tr>
-                            <tr onclick="fillAndSubmit('1년 이용권을 해지하고싶은데 어떻게 진행해요?')">
-                                <td>[18] 자동결제 해지 및 구독 취소</td>
-                                <td>1년 이용권을 해지하고싶은데 어떻게 진행해요?</td>
-                            </tr>
-                            <tr onclick="fillAndSubmit('환불 금액은 알겠는데 언제 입금되여?')">
-                                <td>[22] 환불_계좌 입금일</td>
-                                <td>환불 금액은 알겠는데 언제 입금되여?</td>
-                            </tr>
-                            <tr onclick="fillAndSubmit('3팩이용권구매로 기존웨이브 이용권을 해지하려하는데.. 환불요청합니다')">
-                                <td>[23] 중도환불</td>
-                                <td>3팩이용권구매로 기존웨이브 이용권을 해지하려하는데.. 환불요청합니다</td>
-                            </tr>
-                            <tr onclick="fillAndSubmit('이용권 결제없이 영화 1개 개별구매 방법 알려주세요')">
-                                <td>[35] 개별 구매 영화/단건 이용 안내</td>
-                                <td>이용권 결제없이 영화 1개 개별구매 방법 알려주세요</td>
-                            </tr>
-                            <tr onclick="fillAndSubmit('쿠폰 등록 어떻게 하는 건가요?')">
-                                <td>[41] 쿠폰전환방법</td>
-                                <td>쿠폰 등록 어떻게 하는 건가요?</td>
-                            </tr>
-                            <tr onclick="fillAndSubmit('sbs 정규방송이 왜 안나오나요?')">
-                                <td>[46] SBS 종료</td>
-                                <td>sbs 정규방송이 왜 안나오나요?</td>
-                            </tr>
-                        </tbody>
+                        </tr>
+                        <tr onclick="fillAndSubmit('아이디 좀 찾아주세요.')">
+                            <td>[2] 아이디찾기/비밀번호 재 설정</td>
+                            <td>아이디 좀 찾아주세요.</td>
+                        </tr>
+                        <tr onclick="fillAndSubmit('안녕하세요. 5GX 프라임플러스 요금제에서 부가서비스를 Wavve 앤 데이터 프리미엄으로 선택했고, 회원가입시 T 계정으로 했는데.. 선택한 부가서비스가 되지 않는것 같은데..')">
+                            <td>[10] [SKT]계정 연결 방법</td>
+                            <td>안녕하세요. 5GX 프라임플러스 요금제에서 부가서비스를 Wavve 앤 데이터 프리미엄으로 선택했고, 회원가입시 T 계정으로 했는데.. 선택한 부가서비스가 되지 않는것 같은데..</td>
+                        </tr>
+                        <tr onclick="fillAndSubmit('티빙 연결계정 변경은 어떻게')">
+                            <td>[11] [티빙]더블 이용권 계정 연결 방법</td>
+                            <td>티빙 연결계정 변경은 어떻게</td>
+                        </tr>
+                        <tr onclick="fillAndSubmit('티빙, 웨이브 한꺼번에 있는 거로 이용권 변경 어떻게 해요?')">
+                            <td>[13] 이용권 변경</td>
+                            <td>티빙, 웨이브 한꺼번에 있는 거로 이용권 변경 어떻게 해요?</td>
+                        </tr>
+                        <tr onclick="fillAndSubmit('결제 변경하고 싶어요')">
+                            <td>[14] 결제 수단 변경 방법</td>
+                            <td>결제 변경하고 싶어요</td>
+                        </tr>
+                        <tr onclick="fillAndSubmit('결제 오류라고하면서 결제진행이 안돼요')">
+                            <td>[15] 이용권 미지급/결제 실패</td>
+                            <td>결제 오류라고하면서 결제진행이 안돼요</td>
+                        </tr>
+                        <tr onclick="fillAndSubmit('1년 이용권을 해지하고싶은데 어떻게 진행해요?')">
+                            <td>[17] 자동결제 해지 및 구독 취소</td>
+                            <td>1년 이용권을 해지하고싶은데 어떻게 진행해요?</td>
+                        </tr>
+                        <tr onclick="fillAndSubmit('자동결재해지하구싶어요')">
+                            <td>[17] 자동 결제 해지 및 구독 취소</td>
+                            <td>자동결재해지하구싶어요</td>
+                        </tr>
+                        <tr onclick="fillAndSubmit('현금 영수증 발행 받고 싶은데요')">
+                            <td>[20] 현금 영수증 발행 문의</td>
+                            <td>현금 영수증 발행 받고 싶은데요</td>
+                        </tr>
+                        <tr onclick="fillAndSubmit('환불 금액은 알겠는데 언제 입금되여?')">
+                            <td>[21] 환불_계좌 입금일</td>
+                            <td>환불 금액은 알겠는데 언제 입금되여?</td>
+                        </tr>
+                        <tr onclick="fillAndSubmit('3팩이용권구매로 기존웨이브 이용권을 해지하려하는데.. 환불요청합니다')">
+                            <td>[22] 중도환불</td>
+                            <td>3팩이용권구매로 기존웨이브 이용권을 해지하려하는데.. 환불요청합니다</td>
+                        </tr>
+                        <tr onclick="fillAndSubmit('코인을 계좌로 환불 받기를 원합니다.')">
+                            <td>[22] 중도 환불</td>
+                            <td>코인을 계좌로 환불 받기를 원합니다.</td>
+                        </tr>
+                        <tr onclick="fillAndSubmit('사용안한 기간에 대한 부분환불요청')">
+                            <td>[22] 중도 환불</td>
+                            <td>사용안한 기간에 대한 부분환불요청</td>
+                        </tr>
+                        <tr onclick="fillAndSubmit('어플이 설치가 안되요')">
+                            <td>[29] [모바일] 기본 조치 방법</td>
+                            <td>어플이 설치가 안되요</td>
+                        </tr>
+                        <tr onclick="fillAndSubmit('이용권 결제없이 영화 1개 개별구매 방법 알려주세요')">
+                            <td>[34] 개별 구매 영화/단건 이용 안내</td>
+                            <td>이용권 결제없이 영화 1개 개별구매 방법 알려주세요</td>
+                        </tr>
+                        <tr onclick="fillAndSubmit('쿠폰 등록 어떻게 하는 건가요?')">
+                            <td>[39] 쿠폰전환방법</td>
+                            <td>쿠폰 등록 어떻게 하는 건가요?</td>
+                        </tr>
+                        <tr onclick="fillAndSubmit('sbs 정규방송이 왜 안나오나요?')">
+                            <td>[44] SBS 종료</td>
+                            <td>sbs 정규방송이 왜 안나오나요?</td>
+                        </tr>
+                    </tbody>
                     </table>
                 </div>
                 <div id="pagination" class="pagination"></div>

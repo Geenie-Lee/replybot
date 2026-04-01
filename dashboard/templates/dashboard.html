@@ -74,6 +74,7 @@
                 <a href="{{ url_for('dashboard.index') }}" class="active"><i class="fas fa-chart-line"></i>
                     <span data-i18n="nav_dashboard">{{ all_messages['ko']['dashboard']['nav_dashboard'] }}</span></a>
 
+                {% if current_user and current_user.group_id == 1 %}
                 <!-- System Management Accordion -->
                 <div class="nav-group">
                     <button class="accordion-btn" onclick="toggleAccordion(this)">
@@ -95,10 +96,9 @@
                             <i class="fas fa-comments"></i>
                             <span data-i18n="nav_feedback">{{ all_messages['ko']['dashboard']['nav_feedback'] }}</span>
                         </a>
-                        <!-- <a href="#" data-i18n="nav_groups">{{ all_messages['ko']['dashboard']['nav_groups'] }}</a> -->
-                        <!-- <a href="#" data-i18n="nav_menus">{{ all_messages['ko']['dashboard']['nav_menus'] }}</a> -->
                     </div>
                 </div>
+                {% endif %}
             </nav>
         </aside>
 

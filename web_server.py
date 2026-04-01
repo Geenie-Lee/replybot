@@ -692,7 +692,7 @@ def index():
             if db_session_maker:
                 db = db_session_maker()
                 try:
-                    user_res = db.execute(text("SELECT username, email, admin_yn FROM users WHERE id = :uid"), {"uid": sess['user_id']}).mappings().first()
+                    user_res = db.execute(text("SELECT username, email, admin_yn, group_id FROM users WHERE id = :uid"), {"uid": sess['user_id']}).mappings().first()
                     if user_res:
                         current_user.update(dict(user_res))
                 except Exception as e:

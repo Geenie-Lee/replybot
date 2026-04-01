@@ -66,13 +66,24 @@ def users_page():
     current_lang = request.cookies.get('language', 'ko')
     current_theme = request.cookies.get('theme', server_config.get('server', {}).get('theme', 'mono'))
 
+    engine = get_db_engine()
+    groups_list = []
+    if engine:
+        try:
+            with engine.connect() as conn:
+                res = conn.execute(text("SELECT id, name FROM `groups`")).mappings().all()
+                groups_list = [dict(r) for r in res]
+        except Exception:
+            pass
+
     return render_template('system/users.html', 
                            all_messages=messages, 
                            messages=messages.get(current_lang, {}), # Pass specific lang messages
                            server_config=server_config,
                            current_user=current_user,
                            current_language=current_lang,
-                           current_theme=current_theme)
+                           current_theme=current_theme,
+                           groups=groups_list)
 
 @system_bp.route('/api/users', methods=['GET', 'POST'])
 def api_users_list():
@@ -90,11 +101,12 @@ def api_users_list():
         name = data.get('username')
         email = data.get('email')
         pw = data.get('password')
+        group_id = data.get('group_id', 2)
         
         if not all([uid, name, email, pw]):
             return jsonify({'success': False, 'error': 'Missing required fields'}), 400
             
-        if auth_manager.create_user(uid, name, pw, email):
+        if auth_manager.create_user(uid, name, pw, email, group_id):
             return jsonify({'success': True})
         else:
             return jsonify({'success': False, 'error': 'Failed to create user (ID or Name might vary exists)'}), 400
@@ -118,28 +130,29 @@ def api_users_list():
         
         if search_val:
             if search_cat == 'id':
-                where_clause += " AND id LIKE :val"
+                where_clause += " AND u.id LIKE :val"
             elif search_cat == 'name':
-                where_clause += " AND username LIKE :val"
+                where_clause += " AND u.username LIKE :val"
             elif search_cat == 'email':
-                where_clause += " AND email LIKE :val"
+                where_clause += " AND u.email LIKE :val"
+            elif search_cat == 'group':
+                where_clause += " AND g.name LIKE :val"
             else:
-                where_clause += " AND (id LIKE :val OR username LIKE :val OR email LIKE :val)"
+                where_clause += " AND (u.id LIKE :val OR u.username LIKE :val OR u.email LIKE :val OR g.name LIKE :val)"
             params['val'] = f"%{search_val}%"
 
         # Users table query
-        count_sql = text(f"SELECT COUNT(*) FROM users {where_clause}")
+        count_sql = text(f"SELECT COUNT(*) FROM users u LEFT JOIN `groups` g ON u.group_id = g.id {where_clause}")
         total_count = conn.execute(count_sql, params).scalar()
         
         sql = text(f"""
-            SELECT id, username, email, created_at, last_login_at, is_locked, failed_login_count 
-            FROM users 
+            SELECT u.id, u.username, u.email, u.created_at, u.last_login_at, u.is_locked, u.failed_login_count, g.name as group_name, u.group_id 
+            FROM users u
+            LEFT JOIN `groups` g ON u.group_id = g.id
             {where_clause}
-            ORDER BY created_at DESC
-            LIMIT :limit OFFSET :offset
+            ORDER BY u.username ASC
+            LIMIT {per_page} OFFSET {offset}
         """)
-        params['limit'] = per_page
-        params['offset'] = offset
         
         result = conn.execute(sql, params).mappings().all()
         # Convert to dict and handle datetime serialization if needed (Flask jsonify handles some, but be careful)
@@ -155,7 +168,11 @@ def api_users_list():
             'per_page': per_page
         })
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        import traceback
+        error_msg = str(e)
+        print(f"ERROR in /api/users: {error_msg}")
+        traceback.print_exc()
+        return jsonify({'error': error_msg}), 500
     finally:
         conn.close()
 
@@ -182,6 +199,9 @@ def api_user_detail(user_id):
             if 'email' in data:
                 fields.append("email = :email")
                 params['email'] = data['email']
+            if 'group_id' in data:
+                fields.append("group_id = :group_id")
+                params['group_id'] = data['group_id']
             if 'is_locked' in data:
                 fields.append("is_locked = :locked")
                 params['locked'] = 1 if data['is_locked'] else 0
@@ -216,7 +236,7 @@ def api_user_detail(user_id):
         
     conn = engine.connect()
     try:
-        sql = text("SELECT id, username, email, created_at, last_login_at, is_locked, failed_login_count, locked_until FROM users WHERE id = :uid")
+        sql = text("SELECT id, username, email, group_id, created_at, last_login_at, is_locked, failed_login_count, locked_until FROM users WHERE id = :uid")
         result = conn.execute(sql, {'uid': user_id}).mappings().first()
         if result:
             return jsonify(_format_datetimes(dict(result)))
@@ -471,9 +491,21 @@ def api_templates():
                     break
             
             if updated:
-                # 1. Update File
-                with open(tpl_path, 'w', encoding='utf-8') as f:
+                # 1. Update File (Sync to disk securely)
+                import os, sys
+                abs_tpl_path = os.path.abspath(tpl_path)
+                with open(abs_tpl_path, 'w', encoding='utf-8') as f:
                     json.dump(templates, f, ensure_ascii=False, indent=4)
+                    f.flush()
+                    os.fsync(f.fileno())
+                
+                # 1-1. Update Memory for AI Bot (Sync to actual usage point)
+                ws = sys.modules.get('web_server')
+                if ws and hasattr(ws, 'templates_by_id'):
+                    if target_id in ws.templates_by_id:
+                        ws.templates_by_id[target_id]['general_template'] = new_answer
+                        print(f"Memory updated for Template ID: {target_id}")
+                
                 
                 # 2. Insert Log
                 engine = get_db_engine()

@@ -1,9 +1,9 @@
 [database]
-host = "10.10.10.181"
+host = "192.168.75.128"
 user = "aidata"
 password = "nexus!234"
 database = "aidata"
-port = 23306
+port = 3306
 
 [server]
 port = 5000
