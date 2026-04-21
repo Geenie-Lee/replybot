@@ -16,42 +16,6 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/components.css') }}">
 
     <style>
-        /* Duck Animation */
-        #duckContainer {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            z-index: 9999;
-            overflow: hidden;
-            display: none;
-        }
-
-        .duck {
-            position: absolute;
-            width: 60px;
-            height: auto;
-            right: -100px;
-            /* Start off-screen right */
-            animation: flyLeft 10s linear forwards;
-            background-image: url("{{ url_for('static', filename='img/duck.png') }}");
-            background-size: contain;
-            background-repeat: no-repeat;
-        }
-
-        @keyframes flyLeft {
-            0% {
-                transform: translateX(0) translateY(0);
-                right: -100px;
-            }
-
-            100% {
-                transform: translateX(-120vw) translateY(var(--y-shift, 0px));
-                right: 100%;
-            }
-        }
     </style>
 </head>
 
@@ -114,10 +78,12 @@
                         style="text-align: right; font-size: 0.8rem; color: #94a3b8; margin-top: 0.25rem;">0 / 300</div>
                 </div>
             </div>
-            <div style="text-align: center; margin-top: 1.5rem; margin-bottom: 1.5rem;">
-                <button onclick="findTemplate()" class="search-btn">
-                    <i class="fas fa-magic"></i> <span data-i18n="form.btn_generate">{{ messages.form.btn_generate
-                        }}</span>
+            <div style="text-align: center; margin-top: 1.5rem; margin-bottom: 1.5rem; display: flex; justify-content: center; gap: 10px;">
+                <button id="generateBtn" onclick="findTemplate()" class="search-btn">
+                    <i class="fas fa-magic"></i> <span data-i18n="form.btn_generate">{{ messages.form.btn_generate }}</span>
+                </button>
+                <button id="stopBtn" onclick="stopFinding()" class="search-btn" style="display: none; background: #000000; border-color: #000000; color: #ffffff; transition: opacity 0.2s;" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">
+                    <i class="fas fa-stop"></i> <span>중단</span>
                 </button>
             </div>
             <div id="searchResult"></div>
@@ -198,9 +164,6 @@
         </div>
     </div>
 
-    <!-- Duck Container -->
-    <div id="duckContainer"></div>
-
     <!-- Scripts -->
     <script>
         // Server-side variables injected
@@ -214,75 +177,6 @@
     <script src="{{ url_for('static', filename='js/chart.js') }}?v=2"></script>
     <script src="{{ url_for('static', filename='js/ui.js') }}?v=2"></script>
     <script src="{{ url_for('static', filename='js/main.js') }}?v=3"></script>
-    <script>
-        // Idle Animation Logic
-        let idleTime = 0;
-        const idleLimit = 5; // 5 seconds
-        let isFlocking = false;
-
-        // Increment idle time counter every second
-        const idleInterval = setInterval(timerIncrement, 1000);
-
-        function timerIncrement() {
-            idleTime++;
-            const enableDuck = SERVER_CONFIG.server && SERVER_CONFIG.server.enable_duck_animation;
-            if (enableDuck && idleTime >= idleLimit && !isFlocking) {
-                spawnDuckFlock();
-            }
-        }
-
-        function resetTimer() {
-            idleTime = 0;
-        }
-
-        // Events to track activity
-        window.addEventListener('mousemove', resetTimer);
-        window.addEventListener('keypress', resetTimer);
-        window.addEventListener('click', resetTimer);
-        window.addEventListener('scroll', resetTimer);
-        window.addEventListener('touchstart', resetTimer);
-
-        function spawnDuckFlock() {
-            isFlocking = true;
-            const container = document.getElementById('duckContainer');
-            container.style.display = 'block';
-            container.innerHTML = ''; // Clear previous
-
-            const numberOfDucks = 10;
-
-            for (let i = 0; i < numberOfDucks; i++) {
-                const duck = document.createElement('div');
-                duck.className = 'duck';
-
-                // Randomize Start position (Y)
-                const topP = Math.random() * 80 + 10; // 10% to 90% height
-                duck.style.top = topP + '%';
-
-                // Randomize Size slightly
-                const size = 50 + Math.random() * 30;
-                duck.style.width = size + 'px';
-                duck.style.height = size + 'px';
-
-                // Randomize Speed (Duration)
-                const duration = 8 + Math.random() * 5; // 8-13s
-                duck.style.animationDuration = duration + 's';
-
-                // Randomize Delay
-                const delay = Math.random() * 2; // 0-2s delay
-                duck.style.animationDelay = delay + 's';
-
-                container.appendChild(duck);
-            }
-
-            // Cleanup after animation roughly finishes
-            setTimeout(() => {
-                container.style.display = 'none';
-                container.innerHTML = '';
-                isFlocking = false;
-                idleTime = 0; // Reset so it can happen again if still idle
-            }, 15000); // 13s max duration + 2s delay
-        }
-    </script>
 </body>
 
 </html>

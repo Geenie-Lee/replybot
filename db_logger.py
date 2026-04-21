@@ -1,4 +1,3 @@
-
 import mysql.connector
 import datetime
 import os
@@ -108,7 +107,61 @@ class DBLogger:
         except Exception as e:
             print(f"❌ 테이블 생성 실패: {e}")
 
+        # Access Log 테이블 생성
+        self._ensure_access_log_table()
 
+    def _ensure_access_log_table(self):
+        """공개 대시보드 접속 로그 테이블 생성"""
+        create_sql = """
+        CREATE TABLE IF NOT EXISTS replybot_access_logs (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            access_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+            client_ip VARCHAR(50),
+            user_agent TEXT,
+            referer TEXT,
+            access_path VARCHAR(255),
+            query_string TEXT
+        )
+        """
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            cursor.execute(create_sql)
+            conn.commit()
+            cursor.close()
+            conn.close()
+            print("✅ 접속 로그 테이블(replybot_access_logs) 확인/생성 완료")
+        except Exception as e:
+            print(f"❌ 접속 로그 테이블 생성 실패: {e}")
+
+
+
+    def log_access(self, client_ip, user_agent=None, referer=None, access_path=None, query_string=None):
+        """공개 대시보드 접속 로그 기록"""
+        sql = """
+        INSERT INTO replybot_access_logs (
+            access_time, client_ip, user_agent, referer, access_path, query_string
+        ) VALUES (%s, %s, %s, %s, %s, %s)
+        """
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            cursor.execute(sql, (
+                datetime.datetime.now(),
+                client_ip,
+                (user_agent or '')[:500],
+                (referer or '')[:500],
+                access_path,
+                (query_string or '')[:500]
+            ))
+            conn.commit()
+            inserted_id = cursor.lastrowid
+            cursor.close()
+            conn.close()
+            return inserted_id
+        except Exception as e:
+            print(f"❌ 접속 로그 저장 실패: {e}")
+            return None
 
     def log_query(self, customer_number, consultation_type, query_text, predicted_template_id, confidence, processing_time, client_ip, top_template_ids=[], user_id=None):
         sql = """
@@ -179,86 +232,124 @@ class DBLogger:
             print(f"❌ 피드백 업데이트 실패: {e}")
             return False
 
-    def get_dashboard_stats(self):
+    def get_dashboard_stats(self, user_limit=10, relation_limit=5, start_date=None, end_date=None, start_hour=None, end_hour=None, date_unit='day', weekdays=None):
         """대시보드 통계 데이터 조회"""
         stats = {
             "summary": {"total": 0, "avg_confidence": 0, "feedback_count": 0, "avg_processing_time": 0},
             "daily_trend": [],
             "top_templates": [],
             "user_stats": [],
+            "user_template_stats": [],
             "feedback_rate": 0
         }
         try:
             conn = self._get_connection()
             cursor = conn.cursor(dictionary=True)
 
+            where_clauses = []
+            params = []
+            
+            if start_date:
+                where_clauses.append("DATE(request_time) >= %s")
+                params.append(start_date)
+            if end_date:
+                where_clauses.append("DATE(request_time) <= %s")
+                params.append(end_date)
+            if start_hour:
+                where_clauses.append("HOUR(request_time) >= %s")
+                params.append(int(start_hour))
+            if end_hour:
+                where_clauses.append("HOUR(request_time) <= %s")
+                params.append(int(end_hour))
+            if date_unit == 'weekday' and weekdays:
+                # weekdays is a string like "2,3,4"
+                valid_days = [int(d) for d in weekdays.split(',') if d.isdigit()]
+                if valid_days:
+                    placeholders = ','.join(['%s'] * len(valid_days))
+                    where_clauses.append(f"DAYOFWEEK(request_time) IN ({placeholders})")
+                    params.extend(valid_days)
+
+            where_str = " AND ".join(where_clauses)
+            where_sql = ("WHERE " + where_str) if where_str else ""
+            and_where_sql = ("AND " + where_str) if where_str else ""
+
             # 1. 요약 정보
-            cursor.execute("""
+            cursor.execute(f"""
                 SELECT 
                     COUNT(*) as total, 
                     AVG(confidence) as avg_confidence,
                     AVG(processing_time) as avg_processing_time,
                     COUNT(manual_answer) as feedback_count
                 FROM replybot_logs
-            """)
+                {where_sql}
+            """, tuple(params))
             summary = cursor.fetchone()
             if summary:
                 stats["summary"] = summary
                 if summary['total'] > 0:
                     stats["feedback_rate"] = (summary['feedback_count'] / summary['total']) * 100
 
-            # 2. 일별 트렌드 (최근 7일)
-            cursor.execute("""
+            # 2. 일간 트렌드 (항상 기간 필터의 start/end에만 반응하고 date_unit은 무시)
+            date_expr = "DATE(request_time)"
+            
+            cursor.execute(f"""
                 SELECT 
-                    DATE(request_time) as date, 
+                    {date_expr} as date, 
                     COUNT(*) as count 
                 FROM replybot_logs 
-                GROUP BY DATE(request_time) 
-                ORDER BY date DESC 
-                LIMIT 7
-            """)
-            stats["daily_trend"] = cursor.fetchall()[::-1] # 역순으로 정렬하여 날짜 오름차순
+                {where_sql}
+                GROUP BY {date_expr}
+                ORDER BY date ASC 
+                LIMIT 100
+            """, tuple(params))
+            
+            stats["daily_trend"] = cursor.fetchall()
 
             # 3. 상위 템플릿 사용
-            cursor.execute("""
+            cursor.execute(f"""
                 SELECT 
                     predicted_template_id, 
                     COUNT(*) as count 
                 FROM replybot_logs 
-                WHERE predicted_template_id IS NOT NULL 
+                WHERE predicted_template_id IS NOT NULL {and_where_sql}
                 GROUP BY predicted_template_id 
                 ORDER BY count DESC 
                 LIMIT 5
-            """)
+            """, tuple(params))
             stats["top_templates"] = cursor.fetchall()
 
-            # 4. 사용자별 통계 (Top 5)
+            # 4. 사용자별 통계
             try:
-                cursor.execute("""
+                cursor.execute(f"""
                     SELECT 
                         user_id,
                         COUNT(*) as count,
                         AVG(confidence) as avg_conf 
                     FROM replybot_logs 
-                    WHERE user_id IS NOT NULL AND user_id != ''
+                    WHERE user_id IS NOT NULL AND user_id != '' {and_where_sql}
                     GROUP BY user_id 
                     ORDER BY count DESC
-                    LIMIT 5
-                """)
+                    LIMIT {int(user_limit)}
+                """, tuple(params))
                 stats['user_stats'] = cursor.fetchall()
             except Exception as e:
                 print(f"User Stats Error: {e}")
 
-            # 5. 사용자 - 템플릿 상호작용 통계 (Top 5 users only)
+            # 5. 사용자 - 템플릿 상호작용 통계
             try:
-                # Top 5 유저 추출
-                top_users = [u['user_id'] for u in stats['user_stats']]
+                cursor.execute(f"""
+                    SELECT user_id
+                    FROM replybot_logs 
+                    WHERE user_id IS NOT NULL AND user_id != '' {and_where_sql}
+                    GROUP BY user_id 
+                    ORDER BY COUNT(*) DESC
+                    LIMIT {int(relation_limit)}
+                """, tuple(params))
+                relation_top_users_rows = cursor.fetchall()
+                relation_top_users = [row['user_id'] for row in relation_top_users_rows]
                 
-                if top_users:
-                    # tuple(top_users)가 1개일 때 (x,) 형태가 되어야 함.
-                    # python mysql connector handles tuple/list in IN clause nicely usually via %s and manual formatting or distinct placeholders
-                    # Here simplest is to string format for the IN clause since valid user_ids are expected safe or simple strings
-                    format_strings = ','.join(['%s'] * len(top_users))
+                if relation_top_users:
+                    format_strings = ','.join(['%s'] * len(relation_top_users))
                     
                     sql = f"""
                         SELECT 
@@ -266,17 +357,34 @@ class DBLogger:
                             predicted_template_id, 
                             COUNT(*) as usage_count 
                         FROM replybot_logs 
-                        WHERE user_id IN ({format_strings}) AND predicted_template_id IS NOT NULL
+                        WHERE user_id IN ({format_strings}) AND predicted_template_id IS NOT NULL {and_where_sql}
                         GROUP BY user_id, predicted_template_id
                         ORDER BY user_id, usage_count DESC
                     """
-                    cursor.execute(sql, tuple(top_users))
+                    combined_params = tuple(relation_top_users) + tuple(params)
+                    cursor.execute(sql, combined_params)
                     stats['user_template_stats'] = cursor.fetchall()
                 else:
                     stats['user_template_stats'] = []
 
             except Exception as e:
                 print(f"User Template Stats Error: {e}")
+                
+            # 6. 일별 사용자 질의 수
+            try:
+                cursor.execute(f"""
+                    SELECT 
+                        DATE(request_time) as date,
+                        user_id,
+                        COUNT(*) as count
+                    FROM replybot_logs 
+                    WHERE user_id IS NOT NULL AND user_id != '' {and_where_sql}
+                    GROUP BY DATE(request_time), user_id 
+                    ORDER BY date DESC, count DESC
+                """, tuple(params))
+                stats['daily_user_stats'] = cursor.fetchall()
+            except Exception as e:
+                print(f"Daily User Stats Error: {e}")
             
             cursor.close()
             conn.close()

@@ -359,6 +359,22 @@
                     <button onclick="loadFeedbackLogs(1)" class="btn btn-primary" style="padding:0.6rem 1.2rem;">
                         <i class="fas fa-search"></i> {{ messages.feedback_mgr.btn_search }}
                     </button>
+                    
+                    <div style="position: relative; display: inline-block;">
+                        <button onclick="toggleSystemFeedbackExportMenu()" class="btn" style="padding:0.6rem 1rem; background: #64748b; color: white; border: none; font-weight: 600; cursor: pointer;" title="엑셀 다운로드">
+                            <i class="fas fa-bars"></i>
+                        </button>
+                        <div id="sysFeedbackExportDropdown" style="display: none; position: absolute; right: 0; top: 100%; margin-top: 0.5rem; background: var(--card-bg, white); border: 1px solid var(--border-color); border-radius: 4px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); z-index: 1000; min-width: 120px; overflow: hidden;">
+                            <button onclick="downloadSystemFeedbackExcel(); toggleSystemFeedbackExportMenu();" style="width: 100%; padding: 0.8rem 1rem; color: var(--text-primary); background: transparent; border: none; text-align: left; cursor: pointer; display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; border-bottom: 1px solid var(--border-color);">
+                                <i class="fas fa-file-excel" style="color: #10b981;"></i> Excel
+                            </button>
+                            <!--
+                            <button onclick="window.print(); toggleSystemFeedbackExportMenu();" style="width: 100%; padding: 0.8rem 1rem; color: var(--text-primary); background: transparent; border: none; text-align: left; cursor: pointer; display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem;">
+                                <i class="fas fa-file-pdf" style="color: #ef4444;"></i> PDF
+                            </button>
+                            -->
+                        </div>
+                    </div>
                 </div>
 
                 <!-- 2. Split Content (Bottom) -->
@@ -372,7 +388,9 @@
                                     <tr>
                                         <th style="width: 180px; white-space: nowrap;">{{
                                             messages.feedback_mgr.col_req_time }}</th>
-                                        <th>{{ messages.feedback_mgr.col_query }}</th>
+                                        <th>
+                                            {{ messages.feedback_mgr.col_query }}
+                                        </th>
                                         <th style="width: 200px;">{{ messages.feedback_mgr.col_rec_category }}</th>
                                         <th style="width: 100px;">{{ messages.feedback_mgr.col_user_id }}</th>
                                         <th style="width: 80px; text-align:center;">{{
@@ -390,7 +408,9 @@
                         <!-- Pagination -->
                         <div class="pagination-controls"
                             style="padding: 0.5rem 1rem; border-top: 1px solid var(--border-color); min-height:50px; display:flex; justify-content:space-between; align-items:center; background:var(--bg-card);">
-                            <div style="flex:1;"></div>
+                            <div style="flex:1;">
+                                <span style="font-size:0.95rem; font-weight:600; color:var(--text-secondary);">Total: <span id="bottomTotalFeedbackCount">0</span></span>
+                            </div>
                             <div style="display:flex; align-items:center; gap:0.5rem;">
                                 <button id="pPrev" onclick="changePage(-1)" disabled class="btn btn-cancel"
                                     style="padding:0.3rem 0.6rem;"><i class="fas fa-chevron-left"></i></button>
@@ -624,6 +644,7 @@
 
                 // Update Pagination
                 const totalPages = Math.ceil(data.total / pageSize);
+                document.getElementById('bottomTotalFeedbackCount').innerText = data.total;
                 document.getElementById('pageInfo').innerText = `${currentPage} / ${totalPages || 1}`;
                 document.getElementById('pPrev').disabled = currentPage <= 1;
                 document.getElementById('pNext').disabled = currentPage >= totalPages;
@@ -851,6 +872,47 @@
                 console.error("Save Decision Error:", err);
                 alert('{{ messages.feedback_mgr.msg_decision_net_err }}');
             }
+        }
+
+        function toggleSystemFeedbackExportMenu() {
+            const dropdown = document.getElementById('sysFeedbackExportDropdown');
+            if (dropdown) {
+                dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none';
+            }
+        }
+
+        document.addEventListener('click', function(event) {
+            const dropdown = document.getElementById('sysFeedbackExportDropdown');
+            if (dropdown) {
+                const btn = event.target.closest('button[onclick="toggleSystemFeedbackExportMenu()"]');
+                if (dropdown.style.display === 'block' && !btn && !event.target.closest('#sysFeedbackExportDropdown')) {
+                    dropdown.style.display = 'none';
+                }
+            }
+        });
+
+        function downloadSystemFeedbackExcel() {
+            const startStr = document.getElementById('searchStartDate').value;
+            const endStr = document.getElementById('searchEndDate').value;
+            
+            let fbVal = document.getElementById('searchFeedback').value;
+            if (fbVal === 'yes') fbVal = 'feedback';
+            if (fbVal === 'no') fbVal = 'none';
+
+            const category = document.getElementById('searchCategory').value;
+            const decision = document.getElementById('searchDecision').value;
+            const keyword = document.getElementById('searchKeyword').value;
+            
+            let url = `/dashboard/api/export-logs-excel?start_date=${startStr}&end_date=${endStr}&feedback_status=${fbVal}&query_text=${encodeURIComponent(keyword)}`;
+            
+            if (category) {
+                url += `&category=${encodeURIComponent(category)}`;
+            }
+            if (decision && decision !== 'all') {
+                url += `&manager_decision=${encodeURIComponent(decision)}`;
+            }
+            
+            window.location.href = url;
         }
 
         // Init

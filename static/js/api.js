@@ -7,11 +7,12 @@ const API = {
         const res = await fetch('/api/templates');
         return await res.json();
     },
-    async findTemplate(query) {
+    async findTemplate(query, signal) {
         const res = await fetch('/api/find_template', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ query })
+            body: JSON.stringify({ query }),
+            signal: signal
         });
         return await res.json();
     },

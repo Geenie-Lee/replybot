@@ -1,10 +1,14 @@
 <!DOCTYPE html>
-<html lang="ko" data-theme="{{ current_theme }}">
+<html lang="ko" data-theme="{{ current_theme }}" data-embed-mode="{{ 'true' if embed_mode else 'false' }}">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    {% if embed_mode %}
+    <title>AI 리플라이봇 대시보드</title>
+    {% else %}
     <title data-i18n="admin_title">{{ all_messages['ko']['dashboard']['admin_title'] }}</title>
+    {% endif %}
     <link rel="stylesheet" href="{{ url_for('dashboard.static', filename='vendor/css/inter.css') }}">
     <link rel="stylesheet" href="{{ url_for('dashboard.static', filename='vendor/css/fontawesome.all.min.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/themes.css') }}">
@@ -40,7 +44,7 @@
 
 <body>
     <div class="dashboard-container">
-        <!-- Sidebar -->
+        {% if not embed_mode %}
         <aside class="sidebar" id="mainSidebar" style="transition: none !important;">
             <script>
                 if (localStorage.getItem('sidebar_collapsed') === 'true' || localStorage.getItem('sidebar_collapsed') === null) {
@@ -101,11 +105,90 @@
                 {% endif %}
             </nav>
         </aside>
+        {% endif %}
 
-        <main class="main-content">
-            <header class="top-bar" style="justify-content: flex-end;">
-                <!-- Date and Language selector removed as per user request -->
+        <main class="main-content" {% if embed_mode %}style="margin-left: 0 !important; width: 100% !important;"{% endif %}>
+            <header class="top-bar" style="display: none;">
+                <!-- top bar is kept empty essentially -->
             </header>
+
+            <!-- Dashboard Top Filter -->
+            <div class="dashboard-filter" style="margin: 0 0 1rem 0; background: var(--card-bg); padding: 0.75rem 1rem; border-radius: 8px; border: 1px solid var(--border-color); display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                
+                <div style="font-weight: 600; color: var(--text-secondary); width: 40px; font-size: 0.9rem;">기간</div>
+
+                <!-- Start Date -->
+                <div style="display: flex; align-items: center; border: 1px solid var(--border-color); border-radius: 4px; background: var(--input-bg); padding: 0.2rem; height: 36px; box-sizing: border-box;">
+                    <button onclick="setToday('filterStartDate')" style="padding: 0.2rem 0.5rem; border: 1px solid var(--primary-accent); border-radius: 4px; background: transparent; color: var(--primary-accent); font-weight: 600; font-size: 0.8rem; cursor: pointer; margin-right: 0.5rem;">Today</button>
+                    <i class="fas fa-caret-left" style="color: var(--text-secondary); cursor: pointer; padding: 0 0.3rem;" onclick="shiftDate('filterStartDate', -1)"></i>
+                    <input type="date" id="filterStartDate" style="border: none; background: transparent; color: var(--text-primary); font-family: inherit; font-size: 0.9rem; padding: 0; outline: none; margin: 0 0.25rem;">
+                    <i class="fas fa-caret-right" style="color: var(--text-secondary); cursor: pointer; padding: 0 0.3rem; margin-right: 0.2rem;" onclick="shiftDate('filterStartDate', 1)"></i>
+                </div>
+
+                <!-- End Date -->
+                <div style="display: flex; align-items: center; border: 1px solid var(--border-color); border-radius: 4px; background: var(--input-bg); padding: 0.2rem; height: 36px; box-sizing: border-box;">
+                    <button onclick="setToday('filterEndDate')" style="padding: 0.2rem 0.5rem; border: 1px solid var(--primary-accent); border-radius: 4px; background: transparent; color: var(--primary-accent); font-weight: 600; font-size: 0.8rem; cursor: pointer; margin-right: 0.5rem;">Today</button>
+                    <i class="fas fa-caret-left" style="color: var(--text-secondary); cursor: pointer; padding: 0 0.3rem;" onclick="shiftDate('filterEndDate', -1)"></i>
+                    <input type="date" id="filterEndDate" style="border: none; background: transparent; color: var(--text-primary); font-family: inherit; font-size: 0.9rem; padding: 0; outline: none; margin: 0 0.25rem;">
+                    <i class="fas fa-caret-right" style="color: var(--text-secondary); cursor: pointer; padding: 0 0.3rem; margin-right: 0.2rem;" onclick="shiftDate('filterEndDate', 1)"></i>
+                </div>
+
+                <!-- Hours -->
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <div style="display: flex; align-items: center; border: 1px solid var(--border-color); border-radius: 4px; background: var(--input-bg); padding: 0 0.5rem; height: 36px; box-sizing: border-box;">
+                        <input type="number" id="filterStartHour" value="00" min="0" max="23" style="border: none; background: transparent; color: var(--text-primary); width: 35px; text-align: center; font-size: 0.9rem; outline: none;">
+                        <i class="far fa-clock" style="color: var(--primary-accent); font-size: 0.9rem; margin-left: 0.2rem;"></i>
+                    </div>
+                    <div style="display: flex; align-items: center; border: 1px solid var(--border-color); border-radius: 4px; background: var(--input-bg); padding: 0 0.5rem; height: 36px; box-sizing: border-box;">
+                        <input type="number" id="filterEndHour" value="23" min="0" max="23" style="border: none; background: transparent; color: var(--text-primary); width: 35px; text-align: center; font-size: 0.9rem; outline: none;">
+                        <i class="far fa-clock" style="color: var(--primary-accent); font-size: 0.9rem; margin-left: 0.2rem;"></i>
+                    </div>
+                </div>
+
+                <!-- Date Unit -->
+                <select id="filterDateUnit" onchange="toggleWeekdayFilter()" style="padding: 0 0.8rem; border: 1px solid var(--border-color); border-radius: 4px; background: var(--input-bg); color: var(--text-primary); font-size: 0.9rem; min-width: 100px; height: 36px; box-sizing: border-box; cursor: pointer;">
+                    <option value="hour">시간대별</option>
+                    <option value="day" selected>일별</option>
+                    <option value="weekday">요일별</option>
+                    <option value="month">월별</option>
+                    <option value="year">년도별</option>
+                </select>
+
+                <!-- Weekday Checkboxes -->
+                <div id="filterWeekdayGroup" style="display: none; align-items: center; gap: 0.5rem; background: var(--input-bg); border: 1px solid var(--border-color); border-radius: 4px; padding: 0 0.5rem; height: 36px; font-size: 0.85rem; flex-wrap: wrap;">
+                    <label style="display:flex; align-items:center; gap:0.2rem; cursor:pointer;"><input type="checkbox" name="filterWeekday" value="2" checked>월</label>
+                    <label style="display:flex; align-items:center; gap:0.2rem; cursor:pointer;"><input type="checkbox" name="filterWeekday" value="3" checked>화</label>
+                    <label style="display:flex; align-items:center; gap:0.2rem; cursor:pointer;"><input type="checkbox" name="filterWeekday" value="4" checked>수</label>
+                    <label style="display:flex; align-items:center; gap:0.2rem; cursor:pointer;"><input type="checkbox" name="filterWeekday" value="5" checked>목</label>
+                    <label style="display:flex; align-items:center; gap:0.2rem; cursor:pointer;"><input type="checkbox" name="filterWeekday" value="6" checked>금</label>
+                    <label style="display:flex; align-items:center; gap:0.2rem; cursor:pointer;"><input type="checkbox" name="filterWeekday" value="7" checked>토</label>
+                    <label style="display:flex; align-items:center; gap:0.2rem; cursor:pointer;"><input type="checkbox" name="filterWeekday" value="1" checked>일</label>
+                </div>
+
+                <div style="flex: 1;"></div>
+
+                <!-- Buttons -->
+                <div style="display: flex; gap: 0.5rem;">
+                    <button onclick="resetDashboardFilter()" style="padding: 0 1.2rem; height: 36px; background: transparent; color: var(--text-primary); border: 1px solid var(--border-color); border-radius: 4px; font-weight: 600; cursor: pointer; font-size: 0.85rem;">초기화</button>
+                    <button onclick="loadDashboardStats()" style="padding: 0 1.2rem; height: 36px; background: var(--primary-accent); color: white; border: none; border-radius: 4px; font-weight: 600; cursor: pointer; font-size: 0.85rem;">조회</button>
+                    
+                    <div style="position: relative; display: inline-block;">
+                        <button onclick="toggleExportMenu()" style="padding: 0 1.2rem; height: 36px; background: #64748b; color: white; border: none; border-radius: 4px; font-weight: 600; cursor: pointer; font-size: 0.85rem; display: flex; align-items: center; gap: 0.4rem;" title="내보내기 메뉴">
+                            <i class="fas fa-bars"></i>
+                        </button>
+                        <div id="exportDropdown" style="display: none; position: absolute; top: 100%; right: 0; margin-top: 0.5rem; background: var(--card-bg, white); border: 1px solid var(--border-color); border-radius: 4px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); z-index: 1000; min-width: 120px; overflow: hidden;">
+                            <button onclick="downloadExcelReport(); toggleExportMenu();" style="width: 100%; padding: 0.8rem 1rem; color: var(--text-primary); background: transparent; border: none; text-align: left; cursor: pointer; display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; border-bottom: 1px solid var(--border-color);">
+                                <i class="fas fa-file-excel" style="color: #10b981;"></i> Excel
+                            </button>
+                            <!--
+                            <button onclick="downloadPdfReport(); toggleExportMenu();" style="width: 100%; padding: 0.8rem 1rem; color: var(--text-primary); background: transparent; border: none; text-align: left; cursor: pointer; display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem;">
+                                <i class="fas fa-file-pdf" style="color: #ef4444;"></i> PDF
+                            </button>
+                            -->
+                        </div>
+                    </div>
+                </div>
+            </div>
 
             <div class="stats-grid">
                 <div class="stat-card">
@@ -133,7 +216,7 @@
 
             </div>
 
-            <div class="charts-container" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem;">
+            <div class="charts-container" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem;">
                 <div class="chart-card" style="min-width: 0;">
                     <h3 data-i18n="chart_template">{{ all_messages['ko']['dashboard']['chart_template'] }}</h3>
                     <div style="position: relative; height: 350px; width: 100%; display:flex; justify-content:center;">
@@ -141,7 +224,16 @@
                     </div>
                 </div>
                 <div class="chart-card" style="min-width: 0; grid-column: span 2;">
-                    <h3 data-i18n="chart_trend">{{ all_messages['ko']['dashboard']['chart_trend'] }}</h3>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                        <h3 data-i18n="chart_trend" style="margin: 0;">{{ all_messages['ko']['dashboard']['chart_trend'] }}</h3>
+                        <select id="trendLimit" onchange="updateTrendChart()" style="padding: 0.2rem 0.5rem; border: 1px solid var(--border-color); border-radius: 4px; font-size: 0.85rem; color: var(--text-secondary); background: var(--bg-input);">
+                            <option value="5">5일</option>
+                            <option value="10" selected>10일</option>
+                            <option value="15">15일</option>
+                            <option value="20">20일</option>
+                            <option value="all">전체</option>
+                        </select>
+                    </div>
                     <div style="position: relative; height: 350px; width: 100%;">
                         <canvas id="trendChart"></canvas>
                     </div>
@@ -149,24 +241,40 @@
             </div>
 
             <!-- User Analytics Section moved below -->
-            <div class="charts-container" style="margin-top:2rem;">
+            <div class="charts-container">
                 <div class="chart-card large">
                     <h3><i class="fas fa-users"></i> <span data-i18n="chart_user_activity">{{
                             all_messages['ko']['dashboard']['chart_user_activity'] }}</span>
                     </h3>
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
                         <div>
-                            <h4 data-i18n="chart_kpi" style="margin-bottom: 1rem; color: #64748b; font-size: 0.95rem;">
-                                {{ all_messages['ko']['dashboard']['chart_kpi'] }}
-                            </h4>
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                                <h4 data-i18n="chart_kpi" style="margin: 0; color: #64748b; font-size: 0.95rem;">
+                                    {{ all_messages['ko']['dashboard']['chart_kpi'] }}
+                                </h4>
+                                <select id="userActivityLimit" onchange="updateUserActivityChart()" style="padding: 0.2rem 0.5rem; border: 1px solid var(--border-color); border-radius: 4px; font-size: 0.85rem; color: var(--text-secondary); background: var(--bg-input);">
+                                    <option value="5">5명</option>
+                                    <option value="10" selected>10명</option>
+                                    <option value="15">15명</option>
+                                    <option value="20">20명</option>
+                                </select>
+                            </div>
                             <div style="position: relative; height: 300px; width: 100%;">
                                 <canvas id="userActivityChart"></canvas>
                             </div>
                         </div>
                         <div>
-                            <h4 data-i18n="chart_relation"
-                                style="margin-bottom: 1rem; color: #64748b; font-size: 0.95rem;">{{
-                                all_messages['ko']['dashboard']['chart_relation'] }}</h4>
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                                <h4 data-i18n="chart_relation"
+                                    style="margin: 0; color: #64748b; font-size: 0.95rem;">{{
+                                    all_messages['ko']['dashboard']['chart_relation'] }}</h4>
+                                <select id="userRelationLimit" onchange="updateUserRelationChart()" style="padding: 0.2rem 0.5rem; border: 1px solid var(--border-color); border-radius: 4px; font-size: 0.85rem; color: var(--text-secondary); background: var(--bg-input);">
+                                    <option value="5" selected>5명</option>
+                                    <option value="10">10명</option>
+                                    <option value="15">15명</option>
+                                    <option value="20">20명</option>
+                                </select>
+                            </div>
                             <div style="position: relative; height: 300px; width: 100%;">
                                 <canvas id="userTemplateChart"></canvas>
                             </div>
@@ -175,6 +283,7 @@
                 </div>
             </div>
 
+            {% if logs_visible %}
             <div class="logs-container" style="margin-top: 2rem;">
                 <div class="chart-card">
                     <div
@@ -254,6 +363,25 @@
                                 <i class="fas fa-search"></i>
                             </button>
                         </div>
+
+                        <!-- Feedback Export Menu -->
+                        <div class="filter-item">
+                            <div style="position: relative; display: inline-block;">
+                                <button onclick="toggleFeedbackExportMenu()" style="padding:0.45rem 1rem; background: #64748b; color: white; border: none; border-radius: 4px; font-weight: 600; cursor: pointer; font-family: inherit;" title="피드백 목록 내보내기">
+                                    <i class="fas fa-bars"></i>
+                                </button>
+                                <div id="feedbackExportDropdown" style="display: none; position: absolute; bottom: 100%; right: 0; margin-bottom: 0.5rem; background: var(--card-bg, white); border: 1px solid var(--border-color); border-radius: 4px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); z-index: 1000; min-width: 120px; overflow: hidden;">
+                                    <button onclick="downloadFeedbackExcel(); toggleFeedbackExportMenu();" style="width: 100%; padding: 0.8rem 1rem; color: var(--text-primary); background: transparent; border: none; text-align: left; cursor: pointer; display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; border-bottom: 1px solid var(--border-color);">
+                                        <i class="fas fa-file-excel" style="color: #10b981;"></i> Excel
+                                    </button>
+                                    <!--
+                                    <button onclick="window.print(); toggleFeedbackExportMenu();" style="width: 100%; padding: 0.8rem 1rem; color: var(--text-primary); background: transparent; border: none; text-align: left; cursor: pointer; display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem;">
+                                        <i class="fas fa-file-pdf" style="color: #ef4444;"></i> PDF
+                                    </button>
+                                    -->
+                                </div>
+                            </div>
+                        </div>
                     </div>
                     <table class="logs-table">
                         <thead>
@@ -285,7 +413,9 @@
                     <!-- Pagination & Rows Footer -->
                     <div
                         style="display:flex; justify-content:space-between; align-items:center; padding-top:1rem; border-top:1px solid #e2e8f0; margin-top:1rem;">
-                        <div style="flex:1;"></div>
+                        <div style="flex:1;">
+                            <span style="font-size:0.95rem; font-weight:600; color:var(--text-secondary);">Total: <span id="dashboardLogsTotalCount">0</span></span>
+                        </div>
 
                         <div class="pagination-controls"
                             style="flex:auto; display:flex; justify-content:center; gap:0.5rem; align-items:center;">
@@ -310,6 +440,7 @@
                     </div>
                 </div>
             </div>
+            {% endif %}
     </div>
     </main>
     </div>
@@ -348,7 +479,9 @@
     <script>
         window.dashboardConfig = {
             messages: {{ all_messages | tojson | safe }},
-        currentUser: "{{ current_user.id if current_user else '' }}"
+            currentUser: "{{ current_user.id if current_user else '' }}",
+            embedMode: document.documentElement.dataset.embedMode === 'true',
+            apiBase: "/dashboard"
         };
     </script>
     <script src="{{ url_for('dashboard.static', filename='js/dashboard.js') }}"></script>

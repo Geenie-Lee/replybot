@@ -10,7 +10,6 @@ port = 5000
 threshold = 0.35
 top_k = 3
 theme = "whitegrayb"
-enable_duck_animation = false
 jwt_secret = "nexus!@#$%^&*{}<>"
 
 [files]
@@ -19,3 +18,6 @@ templates = "model/reply_templates_50.json"
 
 [feedback]
 max_length = 1000
+
+[dashboard.logs_area]
+visible = "off"

@@ -76,8 +76,19 @@ async function loadTemplates() {
     } catch (e) { console.error(e); }
 }
 
+let findController = null;
+
+function stopFinding() {
+    if (findController) {
+        findController.abort();
+        findController = null;
+    }
+}
+
 async function findTemplate() {
     const queryEl = document.getElementById('queryInput');
+    const stopBtn = document.getElementById('stopBtn');
+    const generateBtn = document.getElementById('generateBtn');
     if (!queryEl) return;
 
     const query = queryEl.value.trim();
@@ -93,8 +104,30 @@ async function findTemplate() {
         resultDiv.innerHTML = `<div style='text-align:center; padding:2rem;'><i class='fas fa-spinner fa-spin'></i> ${T('stats.stat_checking')}</div>`;
     }
 
+    // UI Feedback: Disable generate button
+    if (generateBtn) {
+        generateBtn.disabled = true;
+        generateBtn.style.opacity = '0.5';
+    }
+
+    findController = new AbortController();
+
+    // 10초 후에 중단 버튼 노출 (사용자 요청)
+    let stopBtnTimer = setTimeout(() => {
+        if (stopBtn && findController) {
+            stopBtn.style.display = 'inline-block';
+        }
+    }, 10000);
+
     try {
-        const result = await API.findTemplate(query);
+        const result = await API.findTemplate(query, findController.signal);
+        
+        // 결과 도착 시 타이머 취소 (10초 이내인 경우 버튼이 아예 안 나타남)
+        clearTimeout(stopBtnTimer);
+        
+        // 렌더링 시작 전 중단 여부 확인
+        if (findController.signal.aborted) return;
+        
         if (result.success && resultDiv) {
             currentLogId = result.log_id;
             const topTemplates = result.top_templates || [result.template];
@@ -102,7 +135,7 @@ async function findTemplate() {
             // Layout Construction
             let gridHtml = '<div class="results-grid-container fade-in-up">';
 
-            // 1. Top Layer: Rank 1 (Full Width)
+            // 1. Top Layer: Rank 1
             if (topTemplates.length > 0) {
                 const tpl1 = topTemplates[0];
                 gridHtml += `
@@ -123,14 +156,13 @@ async function findTemplate() {
                         </div>
                     </div>
                     <div class="result-meta">
-
                         <span><strong style="color:var(--text-primary);">카테고리:</strong> <span class="meta-tag">${tpl1.category}</span></span>
                     </div>
-                    <pre id="content-1" class="result-content-pre">${tpl1.content || tpl1.template_text}</pre>
+                    <pre id="content-1" class="result-content-pre">${tpl1.content || tpl1.template_text || ''}</pre>
                 </div>`;
             }
 
-            // 2. Bottom Layer: Rank 2 & 3 (Grid Split)
+            // 2. Bottom Layer: Rank 2 & 3
             if (topTemplates.length > 1) {
                 gridHtml += '<div class="results-grid-bottom">';
 
@@ -151,13 +183,12 @@ async function findTemplate() {
                         </div>
                     </div>
                     <div class="result-meta">
-
                         <span><strong style="color:var(--text-primary);">카테고리:</strong> <span class="meta-tag">${tpl2.category}</span></span>
                     </div>
-                    <pre id="content-2" class="result-content-pre" style="max-height:300px;">${tpl2.content || tpl2.template_text}</pre>
+                    <pre id="content-2" class="result-content-pre" style="max-height:300px;">${tpl2.content || tpl2.template_text || ''}</pre>
                 </div>`;
 
-                // Rank 3 (if exists)
+                // Rank 3
                 if (topTemplates.length > 2) {
                     const tpl3 = topTemplates[2];
                     gridHtml += `
@@ -175,20 +206,34 @@ async function findTemplate() {
                             </div>
                         </div>
                         <div class="result-meta">
-    
                             <span><strong style="color:var(--text-primary);">카테고리:</strong> <span class="meta-tag">${tpl3.category}</span></span>
                         </div>
-                        <pre id="content-3" class="result-content-pre" style="max-height:300px;">${tpl3.content || tpl3.template_text}</pre>
+                        <pre id="content-3" class="result-content-pre" style="max-height:300px;">${tpl3.content || tpl3.template_text || ''}</pre>
                     </div>`;
                 }
-
-                gridHtml += '</div>'; // End Bottom Layer Grid
+                gridHtml += '</div>';
             }
-
-            gridHtml += '</div>'; // End Main Container
+            gridHtml += '</div>';
             resultDiv.innerHTML = gridHtml;
+        } else {
+            if (resultDiv) resultDiv.innerHTML = T('stats.stat_error');
         }
-    } catch (e) { if (resultDiv) resultDiv.innerHTML = T('stats.stat_error'); }
+    } catch (e) {
+        if (e.name === 'AbortError') {
+            if (resultDiv) resultDiv.innerHTML = `<div style='text-align:center; padding:2rem; color: #ef4444;'><i class='fas fa-info-circle'></i> 요청이 사용자에 의해 중단되었습니다.</div>`;
+        } else {
+            console.error(e);
+            if (resultDiv) resultDiv.innerHTML = T('stats.stat_error');
+        }
+    } finally {
+        clearTimeout(stopBtnTimer);
+        findController = null;
+        if (stopBtn) stopBtn.style.display = 'none';
+        if (generateBtn) {
+            generateBtn.disabled = false;
+            generateBtn.style.opacity = '1';
+        }
+    }
 }
 
 async function submitFeedback() {

@@ -1,8 +1,9 @@
-model/randomforest_model.pkl
-logs/
 analysis/
 batch/
 doc/
 model/backup/
 model/raw_data/
 test/
+__pycache__/
+*.pyc
+model/randomforest_model.pkl

@@ -32,7 +32,7 @@ from auth_system.auth_core import AuthManager
 from auth_system.middleware import SecurityMiddleware
 
 from db_logger import DBLogger
-from dashboard.routes import dashboard_bp
+from dashboard.routes import dashboard_bp, render_public_dashboard
 from system_management import system_bp
 from product_name_extractor import ProductNameExtractor
 
@@ -69,6 +69,15 @@ CORS(app)  # CORS 설정 추가
 # Dashboard Blueprint 등록
 app.register_blueprint(dashboard_bp, url_prefix='/dashboard')
 app.register_blueprint(system_bp, url_prefix='/system')
+
+# ──────────────────────────────────────────────────────────────────────────────
+# 공개 대시보드 라우트 (인증/세션 불필요) - 외부 Admin 시스템 팝업 연동용
+# 접근 URL: http://10.10.10.181:5000/replybot/dashboard
+# ──────────────────────────────────────────────────────────────────────────────
+@app.route('/replybot/dashboard')
+def replybot_public_dashboard():
+    """외부 U-Connect Admin에서 팝업으로 호출하는 공개 대시보드 (로그인 불필요)"""
+    return render_public_dashboard()
 
 def initialize_server():
     """애플리케이션 팩토리 패턴 - RandomForest 모델 기반 초기화"""
@@ -122,7 +131,7 @@ def initialize_server():
 
             # 3. Security Middleware 등록
             # NOTE: /assets prefix used to bypass Nginx /static block
-            exempt = [r'^/login$', r'^/logout$', r'^/assets/.*', r'^/static/.*', r'^/dashboard/static/.*', r'^/favicon.ico$', r'^/api/messages$', r'^/register$', r'^/sso$', r'^/api/ai_answer$']
+            exempt = [r'^/login$', r'^/logout$', r'^/assets/.*', r'^/static/.*', r'^/dashboard/static/.*', r'^/favicon.ico$', r'^/api/messages$', r'^/register$', r'^/sso$', r'^/api/ai_answer$', r'^/replybot/dashboard.*', r'^/dashboard/api/.*']
             SecurityMiddleware(app, auth_manager, exempt_routes=exempt)
             
             # Make AuthManager accessible to blueprints
@@ -252,55 +261,54 @@ def initialize_server():
 
 def extract_morphological_keywords(text: str, consultation_type: str = "") -> List[str]:
     """텍스트에서 형태소 분석을 통해 키워드 추출 (상담유형 제외)"""
-    if not text or not kiwi_analyzer:
+    if not text:
         return []
+
+    # 1. 텍스트 정규화 (엔진 충돌 방지를 위해 소문자화 및 특수문자 제거)
+    clean_text = text.lower().strip()
+    
+    # Kiwi 분석기가 준비되지 않았거나 충돌할 경우를 대비한 기본 결과 준비
+    # (공백 기준 분리 후 2글자 이상 단어 추출)
+    fallback_keywords = [word for word in clean_text.split() if len(word) >= 2]
+    
+    if not kiwi_analyzer:
+        return fallback_keywords
 
     keywords = []
 
     try:
-        # 문의내용만 형태소 분석 (상담유형 제외)
-        result = kiwi_analyzer.analyze(text)
+        # 2. 형태소 분석 시도
+        result = kiwi_analyzer.analyze(clean_text)
 
         # 중요한 품사태그
         important_pos = {'NNG', 'NNP', 'VV', 'VA', 'VX', 'MM', 'MAG', 'NNB', 'XSV', 'XSA'}
         
-        for token in result[0][0]:
-            form = token.form
-            pos = token.tag
-            
-            # 중요한 품사이고 2글자 이상인 경우
-            if pos in important_pos and len(form) >= 2:
-                keywords.append(form)
-            
-            # 복합어 분해
-            if len(form) >= 3:
-                # 동사/형용사 어간 추출
-                if pos in {'VV', 'VA', 'VX'}:
-                    if form.endswith(('하다', '되다', '이다')):
-                        base = form[:-2]  # '하다' 제거
-                        if len(base) >= 2:
-                            keywords.append(base)
+        if result and result[0]:
+            for token in result[0][0]:
+                form = token.form
+                pos = token.tag
                 
-                # 명사 복합어 처리
-                elif pos in {'NNG', 'NNP'}:
-                    if '취소' in form:
-                        keywords.append('취소')
-                    if '반품' in form:
-                        keywords.append('반품')
-                    if '교환' in form:
-                        keywords.append('교환')
-                    if '배송' in form:
-                        keywords.append('배송')
-                    if '환불' in form:
-                        keywords.append('환불')
-                    if '변경' in form:
-                        keywords.append('변경')
+                # 중요한 품사이고 2글자 이상인 경우
+                if pos in important_pos and len(form) >= 2:
+                    keywords.append(form)
+                
+                # 복합어 분해 및 주요 키워드 강제 추출
+                if len(form) >= 2:
+                    for core in ['취소', '반품', '교환', '배송', '환불', '변경', '설정', '문의']:
+                        if core in form and core not in keywords:
+                            keywords.append(core)
         
+        # 분석 결과가 너무 적으면 fallback과 병합
+        if len(keywords) < 2:
+            unique_extra = [w for w in fallback_keywords if w not in keywords]
+            keywords.extend(unique_extra[:3])
+
         return keywords
         
     except Exception as e:
-        logger.error(f"형태소 분석 오류: {e}")
-        return []
+        logger.error(f"⚠️ 형태소 분석 엔진 오류 (Fallback 모드 작동): {e}")
+        # 엔진 오류 시(Crash 등) 미리 준비한 단어 리스트 반환
+        return fallback_keywords
 
 def predict_template_with_randomforest(customer_keywords: List[str]) -> Dict:
     """RandomForest 모델을 사용하여 템플릿 예측"""
@@ -920,42 +928,42 @@ def find_template():
                     confidence, 
                     processing_time, 
                     request.remote_addr,
-                    top_template_ids,
+                    top_template_ids=top_template_ids,
                     user_id=current_user_id
                 )
             
-             # log_id를 응답에 포함
-            response_data = response.get_json()
-            if response_data:
-                response_data['log_id'] = log_id
-                return jsonify(response_data)
-            return response
+            # log_id를 응답 데이터에 최종 포함
+            final_data = response.get_json()
+            final_data['log_id'] = log_id
+            return jsonify(final_data)
+
         else:
-            response = jsonify({
+            processing_time = (datetime.now() - start_time).total_seconds()
+            error_response = {
                 "success": False,
                 "error": "적합한 템플릿을 찾을 수 없습니다",
                 "confidence": float(confidence) if confidence else 0.0,
                 "processing_time": processing_time,
                 "method": "randomforest_morphological",
                 "morphological_keywords": customer_keywords
-            })
+            }
 
+            log_id = None
             if db_logger:
-                 log_id = db_logger.log_query(
+                log_id = db_logger.log_query(
                     customer_number, 
                     context, 
                     user_query, 
                     None, 
                     0.0, 
                     processing_time, 
-                    request.remote_addr
+                    request.remote_addr,
+                    top_template_ids=[],
+                    user_id=None
                 )
-                 # 실패 시에도 log_id 반환 (피드백 가능하도록)
-                 response_data = response.get_json()
-                 if response_data:
-                     response_data['log_id'] = log_id
-                     return jsonify(response_data)
-            return response
+            
+            error_response['log_id'] = log_id
+            return jsonify(error_response)
             
     except Exception as e:
         import traceback

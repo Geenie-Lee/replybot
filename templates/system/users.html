@@ -376,9 +376,11 @@
                     </div>
 
                     <!-- Pagination & Rows -->
-                    <div class="pagination-controls"
+                    <div class="user-pagination"
                         style="padding: 0.5rem 1rem; border-top: 1px solid var(--border-color); min-height:50px; display:flex; justify-content:space-between; align-items:center; background:var(--bg-card);">
-                        <div style="flex:1;"></div>
+                        <div style="flex:1;">
+                            <span style="font-size:0.95rem; font-weight:600; color:var(--text-secondary);">Total: <span id="dashboardUsersTotalCount">0</span></span>
+                        </div>
 
                         <div style="display:flex; align-items:center; gap:0.5rem;">
                             <button id="uPrev" onclick="changeUserPage(-1)" disabled
@@ -452,14 +454,20 @@
                         </div>
                         <!-- Logs Pagination -->
                         <div class="pagination-controls"
-                            style="padding: 0.5rem; justify-content: center; margin-top: 0.5rem; display:flex; align-items:center; gap:0.5rem;">
-                            <button id="lPrev" onclick="changeLogPage(-1)" disabled
-                                style="padding:0.2rem 0.5rem; border:1px solid var(--border-color); border-radius:4px; cursor:pointer;"><i
-                                    class="fas fa-chevron-left"></i></button>
-                            <span id="lPageInfo" style="margin: 0 0.5rem; font-size:0.8rem;">1 / 1</span>
-                            <button id="lNext" onclick="changeLogPage(1)" disabled
-                                style="padding:0.2rem 0.5rem; border:1px solid var(--border-color); border-radius:4px; cursor:pointer;"><i
-                                    class="fas fa-chevron-right"></i></button>
+                            style="padding: 0.5rem 1rem; border-top: 1px solid var(--border-color); min-height:50px; display:flex; justify-content:space-between; align-items:center; background:var(--bg-card); margin-top: 0.5rem;">
+                            <div style="flex:1;">
+                                <span style="font-size:0.95rem; font-weight:600; color:var(--text-secondary);">Total: <span id="userLogsTotalCount">0</span></span>
+                            </div>
+                            <div style="display:flex; align-items:center; gap:0.5rem;">
+                                <button id="lPrev" onclick="changeLogPage(-1)" disabled
+                                    style="padding:0.2rem 0.5rem; border:1px solid var(--border-color); border-radius:4px; cursor:pointer;"><i
+                                        class="fas fa-chevron-left"></i></button>
+                                <span id="lPageInfo" style="margin: 0 0.5rem; font-size:0.8rem;">1 / 1</span>
+                                <button id="lNext" onclick="changeLogPage(1)" disabled
+                                    style="padding:0.2rem 0.5rem; border:1px solid var(--border-color); border-radius:4px; cursor:pointer;"><i
+                                        class="fas fa-chevron-right"></i></button>
+                            </div>
+                            <div style="flex:1;"></div>
                         </div>
                     </div>
                 </div>
@@ -562,87 +570,9 @@
         </div>
     </div>
 
-    <!-- Duck Container -->
-    {% if server_config.get('server', {}).get('enable_duck_animation', true) %}
-    <div id="duckContainer"></div>
-    {% endif %}
-
     <!-- Scripts -->
     <script src="{{ url_for('dashboard.static', filename='js/dashboard.js') }}"></script>
     <script>
-        {% if server_config.get('server', {}).get('enable_duck_animation', true) %}
-        // Idle Animation Logic
-        let idleTime = 0;
-        const idleLimit = 5; // 5 seconds
-        let isFlocking = false;
-
-        // Increment idle time counter every second
-        const idleInterval = setInterval(timerIncrement, 1000);
-
-        function timerIncrement() {
-            idleTime++;
-            if (idleTime >= idleLimit && !isFlocking) {
-                spawnDuckFlock();
-            }
-        }
-
-        function resetTimer() {
-            idleTime = 0;
-        }
-
-        // Events to track activity
-        window.addEventListener('mousemove', resetTimer);
-        window.addEventListener('keypress', resetTimer);
-        window.addEventListener('click', resetTimer);
-        window.addEventListener('scroll', resetTimer);
-        window.addEventListener('touchstart', resetTimer);
-
-        function spawnDuckFlock() {
-            isFlocking = true;
-            const container = document.getElementById('duckContainer');
-            if (!container) return;
-            container.style.display = 'block';
-            container.innerHTML = ''; // Clear previous
-
-            const numberOfDucks = 10;
-
-            for (let i = 0; i < numberOfDucks; i++) {
-                const duck = document.createElement('div');
-                duck.className = 'duck';
-
-                // Randomize Start position (Y)
-                const topP = Math.random() * 80 + 10; // 10% to 90% height
-                duck.style.top = topP + '%';
-
-                // Randomize Size slightly
-                const size = 50 + Math.random() * 30;
-                duck.style.width = size + 'px';
-                duck.style.height = size + 'px';
-
-                // Randomize Speed (Duration)
-                const duration = 8 + Math.random() * 5; // 8-13s
-                duck.style.animationDuration = duration + 's';
-
-                // Randomize Delay
-                const delay = Math.random() * 2; // 0-2s delay
-                duck.style.animationDelay = delay + 's';
-
-                // Random Y shift during flight
-                duck.style.setProperty('--y-shift', (Math.random() * 200 - 100) + 'px');
-
-                container.appendChild(duck);
-            }
-
-            // Cleanup after animation roughly finishes
-            setTimeout(() => {
-                container.style.display = 'none';
-                container.innerHTML = '';
-                isFlocking = false;
-                idleTime = 0; // Reset so it can happen again if still idle
-            }, 15000); // 13s max duration + 2s delay
-        }
-        {% endif %}
-
         // Shared logic with dashboard.js logic being reused for accordion
         // Sidebar Toggle Logic handled by dashboard.js
 
@@ -794,6 +724,8 @@
 
                 const totalPages = Math.ceil(data.total / pageSize);
                 document.getElementById('uPageInfo').innerText = `${usersPage} / ${totalPages || 1}`;
+                const totalCountEl = document.getElementById('dashboardUsersTotalCount');
+                if (totalCountEl) totalCountEl.innerText = data.total.toLocaleString();
                 document.getElementById('uPrev').disabled = usersPage <= 1;
                 document.getElementById('uNext').disabled = usersPage >= totalPages;
 
@@ -937,6 +869,7 @@
                 }
 
                 const totalPages = Math.ceil(data.total / 10);
+                document.getElementById('userLogsTotalCount').innerText = data.total;
                 document.getElementById('lPageInfo').innerText = `${currentLogPage} / ${totalPages || 1}`;
                 document.getElementById('lPrev').disabled = currentLogPage <= 1;
                 document.getElementById('lNext').disabled = currentLogPage >= totalPages;

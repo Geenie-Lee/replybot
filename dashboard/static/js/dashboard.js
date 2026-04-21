@@ -10,6 +10,25 @@ const translations = {
 
 const SIDEBAR_STATE_KEY = 'sidebar_collapsed';
 
+function getFormattedDateString(d) {
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
+function setDefaultDashboardDates() {
+    const startDateEl = document.getElementById('filterStartDate');
+    const endDateEl = document.getElementById('filterEndDate');
+    if (startDateEl && endDateEl) {
+        const end = new Date();
+        const start = new Date();
+        start.setMonth(end.getMonth() - 1);
+        endDateEl.value = getFormattedDateString(end);
+        startDateEl.value = getFormattedDateString(start);
+    }
+}
+
 document.addEventListener('DOMContentLoaded', async function () {
     const langSelect = document.getElementById('langSelect');
     if (langSelect) langSelect.value = currentLang;
@@ -46,12 +65,12 @@ document.addEventListener('DOMContentLoaded', async function () {
         });
     }
 
-    // Default Date Filter Removed
-    // const startDateEl = document.getElementById('filterStartDate');
-    // const endDateEl = document.getElementById('filterEndDate');
-
-    // if (startDateEl) startDateEl.value = formatDate(yesterday);
-    // if (endDateEl) endDateEl.value = formatDate(today);
+    // Default Date Filter
+    const startDateEl = document.getElementById('filterStartDate');
+    const endDateEl = document.getElementById('filterEndDate');
+    if (startDateEl && endDateEl && !startDateEl.value && !endDateEl.value) {
+        setDefaultDashboardDates();
+    }
 
     // Only initialize Dashboard-specific logic if we are on the dashboard page
     if (document.getElementById('trendChart')) {
@@ -349,6 +368,7 @@ function searchLogs() {
 }
 
 async function loadLogs(page) {
+    if (!document.getElementById('logsTableBody')) return;
     try {
         const startDate = document.getElementById('filterStartDate')?.value || '';
         const endDate = document.getElementById('filterEndDate')?.value || '';
@@ -400,6 +420,7 @@ function formatTemplateDisplay(id) {
 
 function renderLogs(logs) {
     const tbody = document.getElementById('logsTableBody');
+    if (!tbody) return;
     if (!logs.length) {
         tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;">${translations[currentLang].msg_no_logs}</td></tr>`;
         return;
@@ -483,6 +504,12 @@ function toggleLogDetail(id, trElem) {
 function updatePagination(data) {
     currentPage = data.page;
     const pageInfo = document.getElementById('pageInfo');
+    if (!pageInfo) return;
+    
+    const totalCountEl = document.getElementById('dashboardLogsTotalCount');
+    if (totalCountEl) {
+        totalCountEl.textContent = data.total.toLocaleString();
+    }
 
     // Store for translation
     pageInfo.dataset.current = data.page;
@@ -516,19 +543,209 @@ function updateDate() {
     }
 }
 
+// Filter Helper Functions
+function getISODate(date) {
+    const tzOffset = date.getTimezoneOffset() * 60000;
+    return new Date(date - tzOffset).toISOString().split('T')[0];
+}
+
+function setToday(inputId) {
+    document.getElementById(inputId).value = getISODate(new Date());
+}
+
+function shiftDate(inputId, days) {
+    const el = document.getElementById(inputId);
+    if (!el.value) {
+        el.value = getISODate(new Date());
+        return;
+    }
+    const d = new Date(el.value);
+    d.setDate(d.getDate() + days);
+    el.value = getISODate(d);
+}
+
+function toggleWeekdayFilter() {
+    const unit = document.getElementById('filterDateUnit')?.value;
+    const group = document.getElementById('filterWeekdayGroup');
+    if (group) {
+        group.style.display = (unit === 'weekday') ? 'flex' : 'none';
+    }
+}
+
+function resetDashboardFilter() {
+    setDefaultDashboardDates();
+    document.getElementById('filterStartHour').value = '00';
+    document.getElementById('filterEndHour').value = '23';
+    document.getElementById('filterDateUnit').value = 'day';
+    document.querySelectorAll('input[name="filterWeekday"]').forEach(cb => cb.checked = true);
+    toggleWeekdayFilter();
+    loadDashboardStats();
+}
+
 async function loadDashboardStats() {
     try {
-        const response = await fetch('/dashboard/api/stats');
+        // 상단 필터 조회 시 차트 일수 제한 초기화 (사용자 요구사항)
+        const trendLimitSelect = document.getElementById('trendLimit');
+        if (trendLimitSelect) trendLimitSelect.value = 'all';
+
+        const limitSelect = document.getElementById('userActivityLimit');
+        const limit = limitSelect ? limitSelect.value : 10;
+        const relationSelect = document.getElementById('userRelationLimit');
+        const rLimit = relationSelect ? relationSelect.value : 5;
+        
+        const url = getDashboardStatsUrl(limit, rLimit);
+
+        const response = await fetch(url);
         const data = await response.json();
 
         if (data.success) {
             renderStats(data.stats, data.template_map);
             renderCharts(data.stats, data.template_map);
+            // 전체 로드 시 현재 데이터를 전역 변수에 저장 (개별 필터링용)
+            window.lastDashboardData = data;
         } else {
             console.error('Failed to load stats:', data.error);
         }
     } catch (error) {
         console.error('Error loading stats:', error);
+    }
+}
+
+function updateTrendChart() {
+    if (window.lastDashboardData && window.lastDashboardData.success) {
+        const theme = getThemeConfig();
+        renderIndividualCharts(window.lastDashboardData.stats, window.lastDashboardData.template_map, theme, 'trend');
+    }
+}
+
+function getDashboardStatsUrl(limit, rLimit) {
+    let url = `/dashboard/api/stats?user_limit=${limit}&relation_limit=${rLimit}`;
+    const startDate = document.getElementById('filterStartDate')?.value;
+    const endDate = document.getElementById('filterEndDate')?.value;
+    const startHour = document.getElementById('filterStartHour')?.value;
+    const endHour = document.getElementById('filterEndHour')?.value;
+    const dateUnit = document.getElementById('filterDateUnit')?.value || 'day';
+    
+    if (startDate) url += `&start_date=${startDate}`;
+    if (endDate) url += `&end_date=${endDate}`;
+    if (startHour) url += `&start_hour=${startHour}`;
+    if (endHour) url += `&end_hour=${endHour}`;
+    url += `&date_unit=${dateUnit}`;
+
+    if (dateUnit === 'weekday') {
+        const checkedBoxes = Array.from(document.querySelectorAll('input[name="filterWeekday"]:checked'));
+        if (checkedBoxes.length > 0) {
+            const weekdays = checkedBoxes.map(b => b.value).join(',');
+            url += `&weekdays=${weekdays}`;
+        }
+    }
+    return url;
+}
+
+function downloadExcelReport() {
+    const limitSelect = document.getElementById('userActivityLimit');
+    const limit = limitSelect ? limitSelect.value : 10;
+    const relationSelect = document.getElementById('userRelationLimit');
+    const rLimit = relationSelect ? relationSelect.value : 5;
+    
+    // getDashboardStatsUrl을 이용하여 쿼리 파라미터를 조립
+    let statsUrl = getDashboardStatsUrl(limit, rLimit);
+    // /api/stats 경로를 /api/export-excel 로 변경
+    let exportUrl = statsUrl.replace('/api/stats', '/api/export-excel');
+    
+    window.location.href = exportUrl;
+}
+
+function toggleExportMenu() {
+    const dropdown = document.getElementById('exportDropdown');
+    if (dropdown) {
+        dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none';
+    }
+}
+
+// 외부 클릭 시 내보내기 드롭다운 닫기
+document.addEventListener('click', function(event) {
+    const dropdown = document.getElementById('exportDropdown');
+    if (dropdown) {
+        const button = event.target.closest('button[onclick="toggleExportMenu()"]');
+        if (dropdown.style.display === 'block' && !button && !event.target.closest('#exportDropdown')) {
+            dropdown.style.display = 'none';
+        }
+    }
+    
+    // 피드백 영역 드롭다운 닫기
+    const fbDropdown = document.getElementById('feedbackExportDropdown');
+    if (fbDropdown) {
+        const fbButton = event.target.closest('button[onclick="toggleFeedbackExportMenu()"]');
+        if (fbDropdown.style.display === 'block' && !fbButton && !event.target.closest('#feedbackExportDropdown')) {
+            fbDropdown.style.display = 'none';
+        }
+    }
+});
+
+function toggleFeedbackExportMenu() {
+    const dropdown = document.getElementById('feedbackExportDropdown');
+    if (dropdown) {
+        dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none';
+    }
+}
+
+function downloadFeedbackExcel() {
+    const startDate = document.getElementById('filterStartDate')?.value || '';
+    const endDate = document.getElementById('filterEndDate')?.value || '';
+    const predictedId = document.getElementById('filterPredictedId')?.value || '';
+    const userId = document.getElementById('filterUserId')?.value || '';
+    const feedbackStatus = document.getElementById('filterFeedback')?.value || 'all';
+    const queryText = document.getElementById('filterQuery')?.value || '';
+
+    let url = `/dashboard/api/export-logs-excel?start_date=${startDate}&end_date=${endDate}&predicted_id=${predictedId}&user_id=${userId}&feedback_status=${feedbackStatus}&query_text=${encodeURIComponent(queryText)}`;
+    
+    window.location.href = url;
+}
+
+function downloadPdfReport() {
+    // 브라우저의 기본 인쇄 다이얼로그 호출을 통한 PDF 저장 지원
+    window.print();
+}
+
+async function updateUserActivityChart() {
+    try {
+        const limitSelect = document.getElementById('userActivityLimit');
+        const limit = limitSelect ? limitSelect.value : 10;
+        const rLimit = document.getElementById('userRelationLimit')?.value || 5;
+        
+        const url = getDashboardStatsUrl(limit, rLimit);
+        const response = await fetch(url);
+        const data = await response.json();
+
+        if (data.success) {
+            // renderCharts 대신 각 차트별 렌더링 함수를 개별 호출하여 인원수 영향 전파를 막음
+            const theme = getThemeConfig();
+            renderIndividualCharts(data.stats, data.template_map, theme, 'userActivity');
+            window.lastDashboardData = data;
+        }
+    } catch (error) {
+        console.error('Error updating User Activity Chart:', error);
+    }
+}
+
+async function updateUserRelationChart() {
+    try {
+        const limitSelect = document.getElementById('userRelationLimit');
+        const rLimit = limitSelect ? limitSelect.value : 5;
+        const limit = document.getElementById('userActivityLimit')?.value || 10;
+        
+        const url = getDashboardStatsUrl(limit, rLimit);
+        const response = await fetch(url);
+        const data = await response.json();
+
+        if (data.success) {
+            const theme = getThemeConfig();
+            renderUserTemplateHeatmap(data.stats, data.template_map, theme);
+            window.lastDashboardData = data;
+        }
+    } catch (error) {
+        console.error('Error updating User Relation Chart:', error);
     }
 }
 
@@ -647,165 +864,169 @@ function getThemeConfig() {
 }
 
 function renderCharts(stats, templateMap) {
-    // Destroy existing charts if they exist to allow updates
-    if (trendChartInstance) trendChartInstance.destroy();
-    if (templateChartInstance) templateChartInstance.destroy();
-
     const theme = getThemeConfig();
+    renderIndividualCharts(stats, templateMap, theme, 'all');
+    renderUserTemplateHeatmap(stats, templateMap, theme);
+}
 
-    // Trend Chart
-    const trendCtx = document.getElementById('trendChart').getContext('2d');
-    const trendGradient = trendCtx.createLinearGradient(0, 0, 0, 400);
-    // Adjust gradient based on theme? kept simple for now
-    trendGradient.addColorStop(0, 'rgba(15, 23, 42, 0.5)');
-    trendGradient.addColorStop(1, 'rgba(15, 23, 42, 0.05)');
+function renderIndividualCharts(stats, templateMap, theme, filter = 'all') {
+    // 1. Trend Chart
+    if (filter === 'all' || filter === 'trend') {
+        if (trendChartInstance) trendChartInstance.destroy();
+        const trendCtx = document.getElementById('trendChart').getContext('2d');
+        const trendGradient = trendCtx.createLinearGradient(0, 0, 0, 400);
+        trendGradient.addColorStop(0, 'rgba(1, 77, 255, 0.2)');
+        trendGradient.addColorStop(1, 'rgba(1, 77, 255, 0.05)');
 
-    // Custom plugin to draw values on lines
-    const drawTrendValues = {
-        id: 'drawTrendValues',
-        afterDatasetsDraw(chart) {
-            const { ctx } = chart;
-            ctx.save();
-            chart.data.datasets.forEach((dataset, i) => {
-                const meta = chart.getDatasetMeta(i);
-                if (!meta.hidden) {
-                    meta.data.forEach((element, index) => {
-                        const data = dataset.data[index];
-                        if (data !== null && data !== undefined && data > 0) {
-                            ctx.fillStyle = theme.text;
-                            ctx.font = 'bold 11px Inter';
-                            ctx.textAlign = 'center';
-                            ctx.textBaseline = 'bottom';
-                            const x = element.x;
-                            const y = element.y;
-                            ctx.fillText(data, x, y - 8);
-                        }
+        // 일수 제한 적용 로직
+        const trendLimit = document.getElementById('trendLimit')?.value || 'all';
+        let trendData = stats.daily_trend;
+        if (trendLimit !== 'all') {
+            const limitVal = parseInt(trendLimit);
+            trendData = trendData.slice(-limitVal); // 최근 N일 데이터만 선택
+        }
+
+        const drawTrendValues = {
+            id: 'drawTrendValues',
+            afterDatasetsDraw(chart) {
+                const { ctx } = chart;
+                ctx.save();
+                chart.data.datasets.forEach((dataset, i) => {
+                    const meta = chart.getDatasetMeta(i);
+                    if (!meta.hidden) {
+                        meta.data.forEach((element, index) => {
+                            const data = dataset.data[index];
+                            if (data !== null && data !== undefined && data > 0) {
+                                ctx.fillStyle = theme.text;
+                                ctx.font = 'bold 11px Inter';
+                                ctx.textAlign = 'center';
+                                ctx.textBaseline = 'bottom';
+                                const x = element.x;
+                                const y = element.y;
+                                ctx.fillText(data, x, y - 8);
+                            }
+                        });
+                    }
+                });
+            }
+        };
+
+        trendChartInstance = new Chart(trendCtx, {
+            type: 'line',
+            data: {
+                labels: trendData.map(item => {
+                    const d = new Date(item.date);
+                    if (!isNaN(d.getTime())) {
+                        const year = d.getFullYear();
+                        const month = String(d.getMonth() + 1).padStart(2, '0');
+                        const day = String(d.getDate()).padStart(2, '0');
+                        return `${year}.${month}.${day}`;
+                    }
+                    return item.date;
+                }),
+                datasets: [{
+                    label: translations[currentLang].label_daily_queries,
+                    data: trendData.map(item => item.count),
+                    borderColor: theme.line,
+                    backgroundColor: trendGradient,
+                    fill: true,
+                    tension: 0.3,
+                    pointBackgroundColor: theme.cardBg,
+                    pointBorderColor: theme.line,
+                    pointBorderWidth: 2,
+                    pointRadius: 4,
+                    pointHoverRadius: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                layout: {
+                    padding: { top: 25, right: 10, left: 10, bottom: 10 }
+                },
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    y: { 
+                        beginAtZero: true, 
+                        grid: { color: theme.grid }, 
+                        ticks: { color: theme.text, stepSize: 1 } 
+                    },
+                    x: {
+                        grid: { display: false },
+                        ticks: { color: theme.text }
+                    }
+                }
+            },
+            plugins: [drawTrendValues]
+        });
+    }
+
+    // 2. Template Chart
+    if (filter === 'all' || filter === 'template') {
+        if (templateChartInstance) templateChartInstance.destroy();
+        const templateCtx = document.getElementById('templateChart').getContext('2d');
+        const pieColors = theme.pieColors;
+
+        templateChartInstance = new Chart(templateCtx, {
+            type: 'doughnut',
+            data: {
+                labels: stats.top_templates.map(t => {
+                    const category = (templateMap && templateMap[t.predicted_template_id]) || '';
+                    return `[${t.predicted_template_id}] ${category}`;
+                }),
+                datasets: [{
+                    data: stats.top_templates.map(t => t.count),
+                    backgroundColor: pieColors,
+                    borderColor: theme.cardBg,
+                    borderWidth: 2
+                }]
+            },
+            plugins: [{
+                id: 'segmentLabels',
+                afterDatasetsDraw(chart) {
+                    const { ctx } = chart;
+                    chart.data.datasets.forEach((dataset, i) => {
+                        const meta = chart.getDatasetMeta(i);
+                        const total = dataset.data.reduce((acc, curr) => acc + curr, 0);
+
+                        meta.data.forEach((element, index) => {
+                            if (!element.hidden && dataset.data[index] > 0) {
+                                const value = dataset.data[index];
+                                const percentage = total > 0 ? ((value / total) * 100).toFixed(1) + '%' : '0%';
+
+                                const { x, y } = element.tooltipPosition();
+
+                                ctx.save();
+                                ctx.fillStyle = theme.text;
+                                ctx.font = 'bold 11px "Inter", sans-serif';
+                                ctx.textAlign = 'center';
+                                ctx.textBaseline = 'middle';
+
+                                ctx.fillText(`${value}`, x, y - 7);
+                                ctx.fillText(`(${percentage})`, x, y + 7);
+                                ctx.restore();
+                            }
+                        });
                     });
                 }
-            });
-            ctx.restore();
-        }
-    };
-
-    trendChartInstance = new Chart(trendCtx, {
-        type: 'line',
-        data: {
-            labels: stats.daily_trend.map(item => {
-                const d = new Date(item.date);
-                const year = d.getFullYear();
-                const month = String(d.getMonth() + 1).padStart(2, '0');
-                const day = String(d.getDate()).padStart(2, '0');
-                return `${year}.${month}.${day}`;
-            }),
-            datasets: [{
-                label: translations[currentLang].label_daily_queries,
-                data: stats.daily_trend.map(item => item.count),
-                borderColor: theme.line,
-                backgroundColor: 'rgba(0,0,0,0)',
-                fill: false,
-                tension: 0,
-                pointBackgroundColor: theme.cardBg,
-                pointBorderColor: theme.line,
-                pointBorderWidth: 2,
-                pointRadius: 4,
-                pointHoverRadius: 6
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            layout: {
-                padding: { top: 20, right: 0, left: 0 }
-            },
-            // Chart.js 3+ Legend
-            plugins: {
-                legend: {
-                    display: false
-                }
-            },
-            // Chart.js 2.x Legend
-            legend: {
-                display: false
-            },
-            scales: {
-                y: { beginAtZero: true, grid: { color: theme.grid }, ticks: { color: theme.text } },
-                x: {
-                    type: 'category',
-                    grid: { color: theme.grid, offset: false },
-                    offset: false,
-                    ticks: {
-                        color: theme.text,
-                        maxRotation: 0,
-                        align: 'inner'
+            }],
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: { color: theme.text, boxWidth: 12 }
                     }
                 }
             }
-        },
-        plugins: [drawTrendValues]
-    });
+        });
+    }
 
-    // Template Chart
-    const templateCtx = document.getElementById('templateChart').getContext('2d');
-    const pieColors = theme.pieColors;
-
-    templateChartInstance = new Chart(templateCtx, {
-        type: 'doughnut',
-        data: {
-            labels: stats.top_templates.map(t => {
-                const category = (templateMap && templateMap[t.predicted_template_id]) || '';
-                return `[${t.predicted_template_id}] ${category}`;
-            }),
-            datasets: [{
-                data: stats.top_templates.map(t => t.count),
-                backgroundColor: pieColors,
-                borderColor: theme.cardBg,
-                borderWidth: 2
-            }]
-        },
-        plugins: [{
-            id: 'segmentLabels',
-            afterDatasetsDraw(chart) {
-                const { ctx } = chart;
-                chart.data.datasets.forEach((dataset, i) => {
-                    const meta = chart.getDatasetMeta(i);
-                    const total = dataset.data.reduce((acc, curr) => acc + curr, 0);
-
-                    meta.data.forEach((element, index) => {
-                        // Only draw if visible and has value
-                        if (!element.hidden && dataset.data[index] > 0) {
-                            const value = dataset.data[index];
-                            const percentage = total > 0 ? ((value / total) * 100).toFixed(1) + '%' : '0%';
-
-                            const { x, y } = element.tooltipPosition();
-
-                            ctx.save();
-                            ctx.fillStyle = theme.text;
-                            ctx.font = 'bold 11px "Inter", sans-serif';
-                            ctx.textAlign = 'center';
-                            ctx.textBaseline = 'middle';
-
-                            ctx.fillText(`${value}`, x, y - 7);
-                            ctx.fillText(`(${percentage})`, x, y + 7);
-                            ctx.restore();
-                        }
-                    });
-                });
-            }
-        }],
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    position: 'bottom',
-                    labels: { color: theme.text, boxWidth: 12 }
-                }
-            }
-        }
-    });
-
-    // User Activity Chart - 1. Electric Blue
-    if (stats.user_stats && document.getElementById('userActivityChart')) {
+    // 3. User Activity Chart
+    if ((filter === 'all' || filter === 'userActivity') && stats.user_stats && document.getElementById('userActivityChart')) {
         if (userActivityChartInstance) userActivityChartInstance.destroy();
         const uaCtx = document.getElementById('userActivityChart').getContext('2d');
         const uaGradient = uaCtx.createLinearGradient(0, 0, 0, 300);
@@ -850,142 +1071,142 @@ function renderCharts(stats, templateMap) {
                 responsive: true,
                 maintainAspectRatio: false,
                 plugins: {
-                    legend: {
-                        display: false
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let value = context.raw;
+                                let total = stats.summary && stats.summary.total ? stats.summary.total : 0;
+                                let percentage = total > 0 ? ((value / total) * 100).toFixed(2) : 0;
+                                return `${value} (${percentage}%)`;
+                            }
+                        }
                     }
                 },
                 scales: {
-                    y: {
-                        beginAtZero: true,
-                        grid: { color: theme.grid },
-                        ticks: { color: theme.text }
-                    },
-                    x: {
-                        grid: { display: false },
-                        ticks: { color: theme.text }
-                    }
+                    y: { beginAtZero: true, grid: { color: theme.grid }, ticks: { color: theme.text } },
+                    x: { grid: { display: false }, ticks: { color: theme.text } }
                 }
             }
         });
     }
+}
 
-    // User-Template Heatmap (Top 5 Users)
-    if (stats.user_template_stats) {
-        // Destroy Chart if exists and hide canvas
-        if (userTemplateChartInstance) {
-            userTemplateChartInstance.destroy();
-            userTemplateChartInstance = null;
-        }
-        const canvas = document.getElementById('userTemplateChart');
-        if (canvas) canvas.style.display = 'none';
+function renderUserTemplateHeatmap(stats, templateMap, theme) {
+    if (!stats.user_template_stats) return;
 
-        // 1. Get Top 5 Users
-        const topUsers = [...stats.user_stats]
-            .sort((a, b) => b.count - a.count)
-            .slice(0, 5)
-            .map(u => u.user_id);
-
-        if (topUsers.length === 0) return;
-
-        // 2. Get Relevant Templates & Max Count
-        const relevantStats = stats.user_template_stats.filter(s => topUsers.includes(s.user_id));
-        const templateIds = Array.from(new Set(relevantStats.map(s => s.predicted_template_id))).sort((a, b) => a - b);
-
-        let maxCount = 0;
-        const matrixMap = {}; // { "userId-tmplId": count }
-        relevantStats.forEach(s => {
-            matrixMap[`${s.user_id}-${s.predicted_template_id}`] = s.usage_count;
-            if (s.usage_count > maxCount) maxCount = s.usage_count;
-        });
-
-        // 3. Create Container
-        let container = document.getElementById('userTemplateHeatmap');
-        if (!container) {
-            container = document.createElement('div');
-            container.id = 'userTemplateHeatmap';
-            container.style.width = '100%';
-            container.style.height = '300px';
-            container.style.overflow = 'auto';
-            if (canvas && canvas.parentNode) canvas.parentNode.appendChild(container);
-        }
-        container.innerHTML = '';
-        container.style.display = 'block';
-
-        // 4. Build Table CSS
-        // 4. Build Table CSS
-        const tableStyle = `
-            width: 100%; 
-            border-collapse: collapse; 
-            font-size: 0.8rem;
-            color: ${theme.heatmap.textLow};
-            border: 2px solid ${theme.heatmap.border};
-            font-family: inherit;
-        `;
-        const thStyle = `
-            padding: 8px; 
-            position: sticky; 
-            top: 0; 
-            background: ${theme.heatmap.headerBg}; 
-            color: ${theme.heatmap.textLow};
-            z-index: 10;
-            text-align: center;
-            border-bottom: 2px solid ${theme.heatmap.border};
-            border-right: 1px solid ${theme.heatmap.border};
-            font-weight: 700;
-        `;
-        const tdIdStyle = `
-            padding: 8px;
-            position: sticky;
-            left: 0;
-            background: ${theme.heatmap.headerBg};
-            z-index: 5;
-            text-align: left;
-            border-right: 2px solid ${theme.heatmap.border};
-            border-bottom: 1px solid ${theme.heatmap.border};
-            font-weight: 700;
-            color: ${theme.heatmap.textLow};
-            width: 30%;
-            white-space: normal;
-            line-height: 1.2;
-        `;
-
-        // 5. Build HTML
-        const diagBg = `linear-gradient(to top right, ${theme.heatmap.headerBg} 49%, ${theme.heatmap.border} 49%, ${theme.heatmap.border} 51%, ${theme.heatmap.headerBg} 51%)`;
-        let html = `<table style="${tableStyle}"><thead><tr>
-            <th style="${thStyle}; left:0; z-index:20; width:30%; padding:0; background: ${diagBg}; position: relative; min-width: 120px;">
-                <div style="position: absolute; top: 4px; right: 8px; font-size: 0.8rem;">User</div>
-                <div style="position: absolute; bottom: 4px; left: 8px; font-size: 0.8rem;">템플릿</div>
-            </th>`;
-        topUsers.forEach(u => {
-            html += `<th style="${thStyle}">${u}</th>`;
-        });
-        html += '</tr></thead><tbody>';
-
-        templateIds.forEach(tid => {
-            const category = (templateMap && templateMap[tid]) || '';
-            html += `<tr><td style="${tdIdStyle}" title="${category}">[${tid}] ${category}</td>`;
-            topUsers.forEach(uid => {
-                const count = matrixMap[`${uid}-${tid}`] || 0;
-                let bg = theme.heatmap.bgLow;
-                let color = '#999';
-
-                if (count > 0) {
-                    const ratio = maxCount > 0 ? (count / maxCount) : 0;
-                    if (ratio > 0.8) bg = theme.heatmap.bgHigh;
-                    else if (ratio > 0.4) bg = theme.heatmap.bgMid;
-                    // else use default low
-
-                    color = (ratio > 0.4) ? theme.heatmap.textHigh : theme.heatmap.textLow;
-                }
-
-                html += `<td style="background:${bg}; color:${color}; text-align:center; padding:6px; border:1px solid ${theme.heatmap.border};">${count > 0 ? count : '-'}</td>`;
-            });
-            html += '</tr>';
-        });
-        html += '</tbody></table>';
-
-        container.innerHTML = html;
+    if (userTemplateChartInstance) {
+        userTemplateChartInstance.destroy();
+        userTemplateChartInstance = null;
     }
+    const canvas = document.getElementById('userTemplateChart');
+    if (canvas) canvas.style.display = 'none';
+
+    // 1. Get Top Users and Sort by Total Usage
+    const userTotals = {};
+    stats.user_template_stats.forEach(s => {
+        userTotals[s.user_id] = (userTotals[s.user_id] || 0) + s.usage_count;
+    });
+    const topUsers = Object.keys(userTotals).sort((a, b) => userTotals[b] - userTotals[a]);
+    if (topUsers.length === 0) return;
+
+    // 2. Get Relevant Templates & Max Count
+    const relevantStats = stats.user_template_stats.filter(s => topUsers.includes(s.user_id));
+    const templateIds = Array.from(new Set(relevantStats.map(s => s.predicted_template_id))).sort((a, b) => a - b);
+
+    let maxCount = 0;
+    const matrixMap = {}; // { "userId-tmplId": count }
+    relevantStats.forEach(s => {
+        matrixMap[`${s.user_id}-${s.predicted_template_id}`] = s.usage_count;
+        if (s.usage_count > maxCount) maxCount = s.usage_count;
+    });
+
+    // 3. Create Container
+    let container = document.getElementById('userTemplateHeatmap');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'userTemplateHeatmap';
+        container.style.width = '100%';
+        container.style.height = '300px';
+        container.style.overflow = 'auto';
+        if (canvas && canvas.parentNode) canvas.parentNode.appendChild(container);
+    }
+    container.innerHTML = '';
+    container.style.display = 'block';
+
+    // 4. Build Table CSS
+    const tableStyle = `
+        width: 100%; 
+        border-collapse: collapse; 
+        font-size: 0.8rem;
+        color: ${theme.heatmap.textLow};
+        border: 2px solid ${theme.heatmap.border};
+        font-family: inherit;
+    `;
+    const isRotated = topUsers.length >= 10;
+    const thStyle = `
+        padding: 8px; 
+        position: sticky; 
+        top: 0; 
+        background: ${theme.heatmap.headerBg}; 
+        color: ${theme.heatmap.textLow};
+        z-index: 10;
+        text-align: center;
+        border-bottom: 2px solid ${theme.heatmap.border};
+        border-right: 1px solid ${theme.heatmap.border};
+        font-weight: 700;
+    `;
+    const thUserStyle = thStyle + (isRotated ? " writing-mode: vertical-rl; text-orientation: mixed; transform: rotate(180deg); height: 100px; padding: 12px 0;" : "");
+    const tdIdStyle = `
+        padding: 8px;
+        position: sticky;
+        left: 0;
+        background: ${theme.heatmap.headerBg};
+        z-index: 5;
+        text-align: left;
+        border-right: 2px solid ${theme.heatmap.border};
+        border-bottom: 1px solid ${theme.heatmap.border};
+        font-weight: 700;
+        color: ${theme.heatmap.textLow};
+        width: 30%;
+        white-space: normal;
+        line-height: 1.2;
+    `;
+
+    // 5. Build HTML
+    const diagBg = `linear-gradient(to top right, ${theme.heatmap.headerBg} 49%, ${theme.heatmap.border} 49%, ${theme.heatmap.border} 51%, ${theme.heatmap.headerBg} 51%)`;
+    let html = `<table style="${tableStyle}"><thead><tr>
+        <th style="${thStyle}; left:0; z-index:20; width:30%; padding:0; background: ${diagBg}; position: relative; min-width: 120px;">
+            <div style="position: absolute; top: 4px; right: 8px; font-size: 0.8rem;">User</div>
+            <div style="position: absolute; bottom: 4px; left: 8px; font-size: 0.8rem;">템플릿</div>
+        </th>`;
+    topUsers.forEach(u => {
+        html += `<th style="${thUserStyle}"><span title="${u}">${u}</span></th>`;
+    });
+    html += '</tr></thead><tbody>';
+
+    templateIds.forEach(tid => {
+        const category = (templateMap && templateMap[tid]) || '';
+        html += `<tr><td style="${tdIdStyle}" title="${category}">[${tid}] ${category}</td>`;
+        topUsers.forEach(uid => {
+            const count = matrixMap[`${uid}-${tid}`] || 0;
+            let bg = theme.heatmap.bgLow;
+            let color = theme.heatmap.textLow;
+
+            if (count > 0) {
+                const ratio = maxCount > 0 ? (count / maxCount) : 0;
+                if (ratio > 0.8) bg = theme.heatmap.bgHigh;
+                else if (ratio > 0.4) bg = theme.heatmap.bgMid;
+                color = (ratio > 0.4) ? theme.heatmap.textHigh : theme.heatmap.textLow;
+            }
+
+            html += `<td style="background:${bg}; color:${color}; text-align:center; padding:6px; border:1px solid ${theme.heatmap.border};">${count > 0 ? count : '-'}</td>`;
+        });
+        html += '</tr>';
+    });
+    html += '</tbody></table>';
+
+    container.innerHTML = html;
 }
 
 // Server Health Check
@@ -993,6 +1214,10 @@ let healthCheckFailures = 0;
 const MAX_FAILURES = 3;
 
 async function checkServerHealth() {
+    // 공개 대시보드(embed mode)에서는 세션 체크 불필요
+    const isEmbedMode = window.dashboardConfig && window.dashboardConfig.embedMode;
+    if (isEmbedMode) return;
+
     try {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
