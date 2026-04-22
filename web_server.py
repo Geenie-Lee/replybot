@@ -983,6 +983,22 @@ def get_templates():
     try:
         if not templates_by_id:
             return jsonify({"error": "템플릿 데이터가 없습니다"})
+            
+        # 신규 추가: 멀티프로세스 환경에서 다른 프로세스가 변경한 파일 내용을 즉시 반영하기 위해 디스크에서 다시 읽기
+        try:
+            import json, os
+            if 'TEMPLATES_FILE' in globals() and os.path.exists(TEMPLATES_FILE):
+                with open(TEMPLATES_FILE, 'r', encoding='utf-8') as f:
+                    fresh_data = json.load(f)
+                for t in fresh_data:
+                    tid = t.get('id')
+                    if tid is not None:
+                        if tid in templates_by_id:
+                            templates_by_id[tid].update(t)
+                        elif str(tid) in templates_by_id:
+                            templates_by_id[str(tid)].update(t)
+        except Exception as e:
+            pass # 로깅은 생략 (또는 logger.error를 쓸 수 있음)
         
         templates_list = []
         for template_id, template in templates_by_id.items():

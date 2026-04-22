@@ -4,7 +4,8 @@ const API = {
         return await res.json();
     },
     async getTemplates() {
-        const res = await fetch('/api/templates');
+        const ts = new Date().getTime();
+        const res = await fetch('/api/templates?t=' + ts, { cache: 'no-store' });
         return await res.json();
     },
     async findTemplate(query, signal) {

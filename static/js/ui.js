@@ -24,8 +24,17 @@ const UI = {
             document.body.removeChild(textArea);
         }
     },
-    openModal(templateId) {
-        const template = allTemplates.find(t => t.id == templateId);
+    async openModal(templateId) {
+        try {
+            const data = await API.getTemplates();
+            if (data && data.templates) {
+                window.allTemplates = data.templates;
+            }
+        } catch (e) {
+            console.error("Failed to fetch fresh templates", e);
+        }
+
+        const template = (window.allTemplates || []).find(t => t.id == templateId);
         if (!template) return;
         document.getElementById('modalTitle').innerText = `[${template.id}] ${template.title || template.category}`;
         document.getElementById('modalCategory').innerText = template.category;
@@ -40,7 +49,7 @@ const UI = {
         overlay.classList.remove('open');
         document.body.style.overflow = '';
     },
-    onCategoryChange(el) {
+    async onCategoryChange(el) {
         const id = el.value;
         const inputEl = document.getElementById('feedbackInput');
 
@@ -54,6 +63,15 @@ const UI = {
             return;
         }
 
+        try {
+            const data = await API.getTemplates();
+            if (data && data.templates) {
+                window.allTemplates = data.templates;
+            }
+        } catch (e) {
+            console.error("Failed to fetch fresh templates", e);
+        }
+
         const template = (window.allTemplates || []).find(t => String(t.id) === String(id));
         if (template) {
             const content = template.full_content || template.template_text;
@@ -65,12 +83,21 @@ const UI = {
             }
         }
     },
-    openFeedbackModal() {
+    async openFeedbackModal() {
         if (!currentLogId) {
             // Check if T is defined, otherwise fallback string
             const msg = (typeof T === 'function') ? T('result.error_default') : 'Error';
             alert(msg);
             return;
+        }
+
+        try {
+            const data = await API.getTemplates();
+            if (data && data.templates) {
+                window.allTemplates = data.templates;
+            }
+        } catch (e) {
+            console.error("Failed to fetch fresh templates", e);
         }
 
         // Populate Select

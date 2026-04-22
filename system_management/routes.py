@@ -500,11 +500,21 @@ def api_templates():
                     os.fsync(f.fileno())
                 
                 # 1-1. Update Memory for AI Bot (Sync to actual usage point)
-                ws = sys.modules.get('web_server')
-                if ws and hasattr(ws, 'templates_by_id'):
-                    if target_id in ws.templates_by_id:
-                        ws.templates_by_id[target_id]['general_template'] = new_answer
-                        print(f"Memory updated for Template ID: {target_id}")
+                import sys
+                for mod_name in ['web_server', '__main__']:
+                    ws = sys.modules.get(mod_name)
+                    if ws and hasattr(ws, 'templates_by_id'):
+                        if target_id in ws.templates_by_id:
+                            ws.templates_by_id[target_id]['general_template'] = new_answer
+                            ws.templates_by_id[target_id]['template_text'] = new_answer
+                            ws.templates_by_id[target_id]['content'] = new_answer
+                            print(f"Memory updated for Template ID {target_id} in module {mod_name}")
+                        str_id = str(target_id)
+                        if str_id in ws.templates_by_id:
+                            ws.templates_by_id[str_id]['general_template'] = new_answer
+                            ws.templates_by_id[str_id]['template_text'] = new_answer
+                            ws.templates_by_id[str_id]['content'] = new_answer
+                            print(f"Memory updated for Template ID (str) {str_id} in module {mod_name}")
                 
                 
                 # 2. Insert Log
