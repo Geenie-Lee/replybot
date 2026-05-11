@@ -644,7 +644,7 @@
 
                 // Update Pagination
                 const totalPages = Math.ceil(data.total / pageSize);
-                document.getElementById('bottomTotalFeedbackCount').innerText = data.total;
+                document.getElementById('bottomTotalFeedbackCount').innerText = data.total.toLocaleString();
                 document.getElementById('pageInfo').innerText = `${currentPage} / ${totalPages || 1}`;
                 document.getElementById('pPrev').disabled = currentPage <= 1;
                 document.getElementById('pNext').disabled = currentPage >= totalPages;

@@ -869,7 +869,7 @@
                 }
 
                 const totalPages = Math.ceil(data.total / 10);
-                document.getElementById('userLogsTotalCount').innerText = data.total;
+                document.getElementById('userLogsTotalCount').innerText = data.total.toLocaleString();
                 document.getElementById('lPageInfo').innerText = `${currentLogPage} / ${totalPages || 1}`;
                 document.getElementById('lPrev').disabled = currentLogPage <= 1;
                 document.getElementById('lNext').disabled = currentLogPage >= totalPages;
